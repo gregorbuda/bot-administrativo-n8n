@@ -1,0 +1,1844 @@
+{
+  "name": "Módulo Cobros - Reportar Pago",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tipo_usuario"
+            },
+            {
+              "name": "referencia_id"
+            },
+            {
+              "name": "chat_id"
+            },
+            {
+              "name": "mensaje_usuario"
+            },
+            {
+              "name": "flujo_activo"
+            },
+            {
+              "name": "paso_actual"
+            },
+            {
+              "name": "datos_temporales"
+            },
+            {
+              "name": "file_id"
+            },
+            {
+              "name": "es_archivo"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2368,
+        -784
+      ],
+      "id": "6bd67169-0e23-4217-b8b9-2d1a711b9009",
+      "name": "Inicio"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo",
+              "fieldValue": "reportando_pago"
+            },
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_factura"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1568,
+        336
+      ],
+      "id": "7ee7b2df-52d6-4518-a6c1-ba5282907ac5",
+      "name": "18 - Actualiza Estado Reportando",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_aging",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.referencia_id }}"
+            },
+            {
+              "keyName": "estado",
+              "condition": "neq",
+              "keyValue": "Pagada"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        336
+      ],
+      "id": "51da301a-5775-440b-b7f0-5c99a2c35da3",
+      "name": "17 - Consulta Facturas Pendientes",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.chat_id }}\",\n  \"text\": \"{{ $json.texto }}\",\n  \"reply_markup\": {{ $json.botones }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -352,
+        336
+      ],
+      "id": "2d6870c0-5f43-4b8f-b89f-624a070882b0",
+      "name": "20 - Envia Lista Facturas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const facturas = $('17 - Consulta Facturas Pendientes').all();\nconst chat_id = $('Inicio').item.json.chat_id;\n\nconst inline_keyboard = facturas.map(f => ([{\n  text: `${f.json.numero_factura} - $${f.json.saldo_pendiente} (${f.json.bucket_aging})`,\n  callback_data: `factura:${f.json.factura_id}`\n}]));\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    texto: facturas.length > 0\n      ? 'Selecciona la factura que deseas pagar:'\n      : 'No tienes facturas pendientes.',\n    botones: JSON.stringify({ inline_keyboard })\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        336
+      ],
+      "id": "7c87158f-a858-44f5-b474-71f1b4a6a56b",
+      "name": "19 - Presenta Facturas Con Botones"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b345c287-1e2f-4389-9980-5a86f52aa004",
+              "leftValue": "={{ $json.mensaje_usuario }}",
+              "rightValue": "factura:",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1584,
+        80
+      ],
+      "id": "88e07641-f92a-4418-ba80-df46bb80e22c",
+      "name": "21 - Detecta Seleccion Factura"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = $('Inicio').item.json.mensaje_usuario;\nconst factura_id = mensaje.replace('factura:', '');\nconst chat_id = $('Inicio').item.json.chat_id;\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    factura_id: factura_id\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        -48
+      ],
+      "id": "9177ba7e-f61f-455b-a6f4-650aa902a75a",
+      "name": "23 - Extrae Factura Id"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor selecciona una factura usando los botones de arriba. ⬆️",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1344,
+        144
+      ],
+      "id": "31274c8c-c41f-4397-b8f4-ca70f24bdb02",
+      "name": "22 - Pide Usar Botones",
+      "webhookId": "68092a84-ad23-4df5-ba92-a27bd8d8528f",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_aging",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "factura_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.factura_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        -48
+      ],
+      "id": "cf4957e9-6420-4422-81d1-63797c82ed60",
+      "name": "24 - Consulta Datos Factura",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('23 - Extrae Factura Id').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_monto"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "={{ JSON.stringify({ factura_id: $('23 - Extrae Factura Id').item.json.factura_id, numero_factura: $json.numero_factura, saldo_pendiente: $json.saldo_pendiente }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -64
+      ],
+      "id": "4cfecd65-8a8f-43cc-8d2d-0f4b9d9bb8df",
+      "name": "25 - Guarda Factura Elegida y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo",
+              "fieldValue": "=null"
+            },
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "=null"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "{}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1600,
+        -288
+      ],
+      "id": "e3fd3dbd-152f-425e-99fc-add4613db8bb",
+      "name": "27 - Cancela Reporte Pago",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Reporte de pago cancelado. ¿En qué más te puedo ayudar?",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1392,
+        -288
+      ],
+      "id": "628ce9be-8902-40de-bb4b-5163dde8183e",
+      "name": "28 - Confirma Cancelacion",
+      "webhookId": "00cddd02-e246-4b05-8f22-21ce9ef0bba6",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const texto = $('Inicio').item.json.mensaje_usuario;\nconst monto = parseFloat(texto);\nconst esValido = !isNaN(monto) && monto > 0 && /^\\d+(\\.\\d{1,2})?$/.test(texto.trim());\n\nreturn {\n  json: {\n    monto_valido: esValido,\n    monto: esValido ? monto : null\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        -528
+      ],
+      "id": "a7007153-49c0-4565-9f70-e9464cbebbf1",
+      "name": "29a - Verifica Formato Monto"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1f872248-6bd3-4944-ac25-225d9cf1baa5",
+              "leftValue": "={{ $json.monto_valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1408,
+        -528
+      ],
+      "id": "7442eb63-4266-4b1b-bd37-dda6c30d4e6e",
+      "name": "29 - IF Monto Valido"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_metodo"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "={{ JSON.stringify({ ...JSON.parse($('Inicio').item.json.datos_temporales), monto: $('29a - Verifica Formato Monto').item.json.monto }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        -640
+      ],
+      "id": "4613a2ad-b520-4276-af45-3fd1d6dc0a70",
+      "name": "31 - Guarda Monto y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "=Perfecto, vas a pagar ${{ $('Inicio').item.json.mensaje_usuario }}. ¿Cuál es el método de pago?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🏦 Transferencia",
+                    "additionalFields": {
+                      "callback_data": "metodo:transferencia"
+                    }
+                  },
+                  {
+                    "text": "📱 Pago Móvil",
+                    "additionalFields": {
+                      "callback_data": "metodo:pago_movil"
+                    }
+                  },
+                  {
+                    "text": "💵 Zelle",
+                    "additionalFields": {
+                      "callback_data": "metodo:zelle"
+                    }
+                  },
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -928,
+        -640
+      ],
+      "id": "76af22a4-558e-4aec-99f9-a9266b134281",
+      "name": "32 - Pide Metodo Pago",
+      "webhookId": "4895fb86-8531-4a5c-9815-3128097814bf",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor escribe solo el número del monto a pagar, por ejemplo: 500 o 500.50",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1104,
+        -416
+      ],
+      "id": "02852494-0ae7-487c-a9f2-e59676ed8611",
+      "name": "30 - Pide Monto Valido",
+      "webhookId": "7dc201cd-560e-4c18-a146-4ada09c8327b",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = $('Inicio').item.json.mensaje_usuario;\nconst esMetodoValido = mensaje.startsWith('metodo:');\nconst metodo = esMetodoValido ? mensaje.replace('metodo:', '') : null;\n\nreturn {\n  json: {\n    metodo_valido: esMetodoValido,\n    metodo: metodo\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1680,
+        -864
+      ],
+      "id": "d59bb734-2cb9-48b5-9507-0c424ec0793b",
+      "name": "33 - Extrae Metodo Pago"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "433a54b2-87e0-4e47-8929-a8a875cd5469",
+              "leftValue": "={{ $json.metodo_valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1488,
+        -864
+      ],
+      "id": "85693f87-91c0-4855-964e-48179cfa6caf",
+      "name": "34 - IF Metodo Valido"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_referencia"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "={{ JSON.stringify({ ...JSON.parse($('Inicio').item.json.datos_temporales), metodo_pago: $('33 - Extrae Metodo Pago').item.json.metodo }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        -960
+      ],
+      "id": "a4aa7cd7-ed0a-49df-a55f-3c8cd67896d9",
+      "name": "36 - Guarda Metodo y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por último, escribe el número de referencia o confirmación del pago.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1072,
+        -960
+      ],
+      "id": "75cf502a-d2f4-4c50-9e26-c88fd23d1a94",
+      "name": "37 - Pide Referencia",
+      "webhookId": "5526498d-6844-4342-825b-673785dee3c4",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor selecciona el método de pago usando los botones.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        -768
+      ],
+      "id": "7427469d-2c39-465a-9150-2adc234ab882",
+      "name": "35 - Pide Usar Botones Metodo",
+      "webhookId": "28570ee7-537a-4d48-a361-7064545ec404",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_pdf"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "={{ JSON.stringify({ ...JSON.parse($('Inicio').item.json.datos_temporales), referencia: $('Inicio').item.json.mensaje_usuario }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        -1136
+      ],
+      "id": "7ef8a54f-12aa-4671-8152-e714854620dd",
+      "name": "38 - Guarda Referencia y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Perfecto. Por último, envía una foto o el PDF del comprobante de pago.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1488,
+        -1136
+      ],
+      "id": "0121350c-0cbf-4190-8f61-c8c335b668c4",
+      "name": "39 - Pide Comprobante PDF",
+      "webhookId": "6b143f67-b23c-4adc-894b-47cfdd0b73d8",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/getFile?file_id={{ $('Inicio').item.json.file_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1504,
+        -1536
+      ],
+      "id": "b9ead3d5-e1c9-4c5d-a806-749461b84101",
+      "name": "42 - Obtiene Info Archivo"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot__TELEGRAM_BOT_TOKEN__/{{ $json.result.file_path }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1296,
+        -1536
+      ],
+      "id": "84626c6b-6cf4-4bd4-913a-bcaec098a017",
+      "name": "43 - Descarga Archivo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://__SUPABASE_PROJECT_REF__.supabase.co/storage/v1/object/comprobantes-pago/{{ $('Inicio').item.json.chat_id }}_{{ $now.toMillis() }}.jpg",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer __SUPABASE_SERVICE_ROLE_KEY__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "image/jpeg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1088,
+        -1536
+      ],
+      "id": "7f0becd5-b9e3-4c53-9f6f-213fbf5b53e2",
+      "name": "44 - Sube a Supabase Storage"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "tableId": "scxc_cobros",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "factura_id",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).factura_id }}"
+            },
+            {
+              "fieldId": "fecha_cobro",
+              "fieldValue": "={{ $now.format('yyyy-MM-dd') }}"
+            },
+            {
+              "fieldId": "monto",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).monto }}"
+            },
+            {
+              "fieldId": "metodo_pago",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).metodo_pago }}"
+            },
+            {
+              "fieldId": "referencia",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).referencia }}"
+            },
+            {
+              "fieldId": "estado_verificacion",
+              "fieldValue": "pendiente"
+            },
+            {
+              "fieldId": "url_comprobante",
+              "fieldValue": "={{ $json.Key }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        -1536
+      ],
+      "id": "d67b2df7-5d5e-41c2-ad81-fdb6e5e9d398",
+      "name": "45 - Guarda Cobro",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "¡Listo! Tu pago fue reportado y está pendiente de verificación. Te avisaremos cuando sea confirmado.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        -1792
+      ],
+      "id": "01575932-e6a2-4436-b8f7-bbff56c96e9d",
+      "name": "46 - Confirma Registro al Cliente",
+      "webhookId": "d2ea319d-a874-48b6-86b2-55dd5f43436f",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo",
+              "fieldValue": "=null"
+            },
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "=null"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "{}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -1232
+      ],
+      "id": "8ec3e27b-736a-4573-824b-fed3cab8ed63",
+      "name": "46b - Limpia Sesion",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://__SUPABASE_PROJECT_REF__.supabase.co/storage/v1/object/sign/comprobantes-pago/{{ $('44 - Sube a Supabase Storage').item.json.Key.replace('comprobantes-pago/', '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer __SUPABASE_SERVICE_ROLE_KEY__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"expiresIn\": 2592000 }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -432,
+        -1536
+      ],
+      "id": "19c98a5e-7c66-431d-a90a-72fd1f0f7de6",
+      "name": "47a - Genera URL Firmada Comprobante"
+    },
+    {
+      "parameters": {
+        "jsCode": "const datos = JSON.parse($('Inicio').item.json.datos_temporales);\nconst signedPath = $json.signedURL;\nconst urlCompleta = `https://__SUPABASE_PROJECT_REF__.supabase.co/storage/v1${signedPath}`;\nconst cobroId = $('45 - Guarda Cobro').item.json.id;\nconst emailAnalista = $('46c - Consulta Email Analista Cobros').item.json.valor;\n\nreturn {\n  json: {\n    numero_factura: datos.numero_factura,\n    monto: datos.monto,\n    metodo_pago: datos.metodo_pago,\n    referencia: datos.referencia,\n    url_comprobante: urlCompleta,\n    cobro_id: cobroId,\n    email_analista: emailAnalista\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -1536
+      ],
+      "id": "7ee282f5-7591-4862-84dc-dd717ee54e7c",
+      "name": "47b - Prepara Datos Correo"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_analista }}",
+        "subject": "=Nuevo pago pendiente de verificación — Factura {{ $json.numero_factura }}",
+        "message": "=<h3>Nuevo pago reportado</h3>\n<p><strong>Factura:</strong> {{ $json.numero_factura }}</p>\n<p><strong>Monto:</strong> ${{ $json.monto }}</p>\n<p><strong>Método de pago:</strong> {{ $json.metodo_pago }}</p>\n<p><strong>Referencia:</strong> {{ $json.referencia }}</p>\n<p><a href=\"{{ $json.url_comprobante }}\">Ver comprobante de pago</a></p>\n<br>\n<p>\n  <a href=\"https://__N8N_HOST__/webhook/cobro-decision?cobro_id={{ $json.cobro_id }}&accion=aprobar\" style=\"background:#22c55e;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">✅ Aprobar</a>\n  &nbsp;\n  <a href=\"https://__N8N_HOST__/webhook/cobro-decision?cobro_id={{ $json.cobro_id }}&accion=rechazar\" style=\"background:#ef4444;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">❌ Rechazar</a>\n</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        16,
+        -1536
+      ],
+      "id": "7c4682c3-3c11-418c-83b0-727304c842c7",
+      "name": "47 - Notifica Analista",
+      "webhookId": "f956f2ae-6308-4525-9d33-ff02dba05678",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e6c36e0b-2fa0-45c1-b659-e86a3ac6807b",
+              "leftValue": "={{ $json.saldo_pendiente }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -944,
+        -48
+      ],
+      "id": "7fa8dee3-0289-44df-8cb2-963dc2011165",
+      "name": "23b - Valida Factura Vigente"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Esa factura ya fue procesada o no está disponible. Aquí tienes tus facturas pendientes actuales:",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -768,
+        96
+      ],
+      "id": "18393c53-1041-4902-be22-59c3e6169545",
+      "name": "23c - Factura Ya No Disponible",
+      "webhookId": "f09b8d5a-4a6a-4414-b175-e2de4a879b7e",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mensaje_usuario }}",
+                    "rightValue": "cancelar_reporte",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8ff2bbe9-e619-436d-8fdd-28ebd4160799"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "538f5ed9-ef37-47bc-8940-d6ea92975e94",
+                    "leftValue": "={{ $json.mensaje_usuario }}",
+                    "rightValue": "reportar_pago",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a1e2d094-e635-4cd3-a563-6a89d2e97ab7",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_factura",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "caa08e7a-e15e-4f9d-9582-4131d7a924bc",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_monto",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "11c11f77-d214-403f-ada9-3a49136df99a",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_metodo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c6c5d513-f485-410f-8606-aeba3176290d",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_referencia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "666c5eb3-182c-4993-9df7-4c6f61cf1a29",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -2144,
+        -864
+      ],
+      "id": "328df371-663d-4d44-b44a-49f208f88b28",
+      "name": "Router - Enruta Paso Reportar Pago"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('23 - Extrae Factura Id').item.json.chat_id }}",
+        "text": "=Factura {{ $('24 - Consulta Datos Factura').item.json.numero_factura }} — Saldo pendiente: ${{ $('24 - Consulta Datos Factura').item.json.saldo_pendiente }}  ¿Cuánto vas a pagar? Escribe solo el número (ej. 500 o 500.50).",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        -64
+      ],
+      "id": "1def6f63-e26e-4a07-8eaf-1977f58914bb",
+      "name": "26 - Pide Monto",
+      "webhookId": "e87fb38c-6dea-43e3-b6a4-6c2bbd95a31d",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2d37d050-df1f-434f-acc5-52636cced05d",
+              "leftValue": "={{ $('Inicio').item.json.es_archivo }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1760,
+        -1520
+      ],
+      "id": "8454f0ba-b484-4533-9f60-d582367d7999",
+      "name": "40 - Verifica Archivo Recibido"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor envía una foto o un archivo PDF del comprobante.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Cancelar",
+                    "additionalFields": {
+                      "callback_data": "cancelar_reporte"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1520,
+        -1328
+      ],
+      "id": "d0ed80e5-42a6-4564-af85-f4a4472bdd5b",
+      "name": "41 - Pide Adjuntar Archivo",
+      "webhookId": "cac8e5b3-3f68-4562-a6c4-344b834e1da1",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "configuracion",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "clave",
+              "condition": "eq",
+              "keyValue": "email_analista_cobros"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -1536
+      ],
+      "id": "3a21f5c9-2186-491a-97d4-a10d22dcb200",
+      "name": "46c - Consulta Email Analista Cobros",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "18 - Actualiza Estado Reportando": {
+      "main": [
+        [
+          {
+            "node": "17 - Consulta Facturas Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 - Consulta Facturas Pendientes": {
+      "main": [
+        [
+          {
+            "node": "19 - Presenta Facturas Con Botones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 - Presenta Facturas Con Botones": {
+      "main": [
+        [
+          {
+            "node": "20 - Envia Lista Facturas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "21 - Detecta Seleccion Factura": {
+      "main": [
+        [
+          {
+            "node": "23 - Extrae Factura Id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 - Pide Usar Botones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 - Extrae Factura Id": {
+      "main": [
+        [
+          {
+            "node": "24 - Consulta Datos Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24 - Consulta Datos Factura": {
+      "main": [
+        [
+          {
+            "node": "23b - Valida Factura Vigente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "27 - Cancela Reporte Pago": {
+      "main": [
+        [
+          {
+            "node": "28 - Confirma Cancelacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "29a - Verifica Formato Monto": {
+      "main": [
+        [
+          {
+            "node": "29 - IF Monto Valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "29 - IF Monto Valido": {
+      "main": [
+        [
+          {
+            "node": "31 - Guarda Monto y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "30 - Pide Monto Valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "31 - Guarda Monto y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "32 - Pide Metodo Pago",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "33 - Extrae Metodo Pago": {
+      "main": [
+        [
+          {
+            "node": "34 - IF Metodo Valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "34 - IF Metodo Valido": {
+      "main": [
+        [
+          {
+            "node": "36 - Guarda Metodo y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "35 - Pide Usar Botones Metodo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "36 - Guarda Metodo y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "37 - Pide Referencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "38 - Guarda Referencia y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "39 - Pide Comprobante PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "42 - Obtiene Info Archivo": {
+      "main": [
+        [
+          {
+            "node": "43 - Descarga Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "43 - Descarga Archivo": {
+      "main": [
+        [
+          {
+            "node": "44 - Sube a Supabase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "44 - Sube a Supabase Storage": {
+      "main": [
+        [
+          {
+            "node": "45 - Guarda Cobro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "45 - Guarda Cobro": {
+      "main": [
+        [
+          {
+            "node": "46b - Limpia Sesion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "46c - Consulta Email Analista Cobros",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "46 - Confirma Registro al Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "47a - Genera URL Firmada Comprobante": {
+      "main": [
+        [
+          {
+            "node": "47b - Prepara Datos Correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "47b - Prepara Datos Correo": {
+      "main": [
+        [
+          {
+            "node": "47 - Notifica Analista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23b - Valida Factura Vigente": {
+      "main": [
+        [
+          {
+            "node": "25 - Guarda Factura Elegida y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "23c - Factura Ya No Disponible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23c - Factura Ya No Disponible": {
+      "main": [
+        [
+          {
+            "node": "17 - Consulta Facturas Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicio": {
+      "main": [
+        [
+          {
+            "node": "Router - Enruta Paso Reportar Pago",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router - Enruta Paso Reportar Pago": {
+      "main": [
+        [
+          {
+            "node": "27 - Cancela Reporte Pago",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "18 - Actualiza Estado Reportando",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "21 - Detecta Seleccion Factura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "29a - Verifica Formato Monto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "33 - Extrae Metodo Pago",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "38 - Guarda Referencia y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "40 - Verifica Archivo Recibido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "25 - Guarda Factura Elegida y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "26 - Pide Monto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "40 - Verifica Archivo Recibido": {
+      "main": [
+        [
+          {
+            "node": "42 - Obtiene Info Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "41 - Pide Adjuntar Archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "46c - Consulta Email Analista Cobros": {
+      "main": [
+        [
+          {
+            "node": "47a - Genera URL Firmada Comprobante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "46 - Confirma Registro al Cliente": {
+      "main": [
+        []
+      ]
+    },
+    "46b - Limpia Sesion": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "37828e51-01ab-468a-814d-7d11b834d1d2",
+  "nodeGroups": [],
+  "id": "QD8g5HWSUDhehSw3",
+  "tags": []
+}

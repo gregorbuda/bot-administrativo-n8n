@@ -1,0 +1,1462 @@
+{
+  "name": "Módulo CxP - Reportar Pago",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tipo_usuario"
+            },
+            {
+              "name": "referencia_id"
+            },
+            {
+              "name": "chat_id"
+            },
+            {
+              "name": "mensaje_usuario"
+            },
+            {
+              "name": "flujo_activo"
+            },
+            {
+              "name": "paso_actual"
+            },
+            {
+              "name": "datos_temporales"
+            },
+            {
+              "name": "file_id"
+            },
+            {
+              "name": "es_archivo"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6123298f-877e-4009-ad5d-19aad2263d30",
+      "name": "Inicio"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mensaje_usuario }}",
+                    "rightValue": "iniciar_pago_proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7e4fe402-473b-4c53-bd94-6cd1458fff96"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2a4b86bd-d4b0-4217-b187-f06765121b6d",
+                    "leftValue": "={{ $json.paso_actual}}",
+                    "rightValue": "esperando_factura_proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2278406c-7625-4357-9405-02e0aaf2c234",
+                    "leftValue": "={{ $json.paso_actual}}",
+                    "rightValue": "esperando_monto_proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7a17797a-e058-4603-93b2-908a7bd47c7e",
+                    "leftValue": "={{ $json.paso_actual}}",
+                    "rightValue": "esperando_metodo_proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f4a6d110-1fbd-4298-8e33-137aa90c4cf7",
+                    "leftValue": "={{ $json.paso_actual}}",
+                    "rightValue": "esperando_referencia_proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "321d0d43-b431-4e21-9b64-98e3ed5a2c44",
+                    "leftValue": "={{ $json.paso_actual}}",
+                    "rightValue": "esperando_pdf_proveedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        -64
+      ],
+      "id": "ce18cf2a-dcee-4b07-81bf-8540e2e9e694",
+      "name": "Router - Enruta Paso Pago Proveedor"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxp_vista_facturas",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "estado",
+              "condition": "eq",
+              "keyValue": "pendiente"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -640
+      ],
+      "id": "70878544-4db4-44e5-a388-c5784c8fe11f",
+      "name": "1 - Consulta Facturas Proveedores Pendientes",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const facturas = $input.all().map(item => item.json);\nconst chat_id = $('Inicio').item.json.chat_id;\n\nconst inline_keyboard = facturas.map(f => ([{\n  text: `${f.numero_factura} - ${f.proveedor} - $${f.saldo_pendiente}`,\n  callback_data: `facturaprov:${f.factura_id}`\n}]));\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    texto: 'Selecciona la factura de proveedor que deseas pagar:',\n    botones: JSON.stringify({ inline_keyboard })\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -640
+      ],
+      "id": "a1333cc5-fe4e-43d2-a4c2-329b6fd68cb3",
+      "name": "2 - Arma Lista Facturas Proveedores"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('2 - Arma Lista Facturas Proveedores').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo",
+              "fieldValue": "pagando_proveedor"
+            },
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_factura_proveedor"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -640
+      ],
+      "id": "f1c51dee-4468-4864-b598-747e8064f69c",
+      "name": "3a - Actualiza Sesion Pago Proveedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('2 - Arma Lista Facturas Proveedores').item.json.chat_id }}\",\n  \"text\": \"{{ $('2 - Arma Lista Facturas Proveedores').item.json.texto }}\",\n  \"reply_markup\": {{ $('2 - Arma Lista Facturas Proveedores').item.json.botones }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1056,
+        -640
+      ],
+      "id": "611853fa-bac3-4c61-a827-f49cbb4b0681",
+      "name": "3b - Envia Lista Facturas Proveedores"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2a6a9c74-a06f-4ecb-bba4-b85beaf6435b",
+              "leftValue": "={{ $json.mensaje_usuario }}",
+              "rightValue": "facturaprov:",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        -368
+      ],
+      "id": "52fdb773-b7e9-416e-93da-bace00112aca",
+      "name": "4 - Detecta Seleccion Factura Proveedor"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor selecciona una factura usando los botones de arriba. ⬆️",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        -304
+      ],
+      "id": "9dd65be4-4ca4-4654-a94f-cc0e7cb3cb4f",
+      "name": "5 - Pide Usar Botones Factura Proveedor",
+      "webhookId": "f84ae5ea-77f7-45fc-9aa1-6bf150d273ec",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = $('Inicio').item.json.mensaje_usuario;\nconst factura_id = mensaje.replace('facturaprov:', '');\nconst chat_id = $('Inicio').item.json.chat_id;\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    factura_id: factura_id\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -448
+      ],
+      "id": "3213a39a-e8ac-48b7-a245-f726f07546ab",
+      "name": "6 - Extrae Factura Proveedor Id"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxp_vista_facturas",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "factura_id",
+              "condition": "eq",
+              "keyValue": "={{ $('6 - Extrae Factura Proveedor Id').item.json.factura_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -448
+      ],
+      "id": "98011e78-87c3-4b21-8fe5-1a05806064e9",
+      "name": "7 - Consulta Datos Factura Proveedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('6 - Extrae Factura Proveedor Id').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_monto_proveedor"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "=  {{ JSON.stringify({ factura_id: $('7 - Consulta Datos Factura Proveedor').item.json.factura_id, numero_factura: $('7 - Consulta Datos Factura Proveedor').item.json.numero_factura, proveedor: $('7 - Consulta Datos Factura Proveedor').item.json.proveedor, saldo_pendiente: $('7 - Consulta Datos Factura Proveedor').item.json.saldo_pendiente }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -448
+      ],
+      "id": "637f4ed5-f6e8-4e6e-9ec3-ff305525654a",
+      "name": "8 - Guarda Factura Proveedor Elegida",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('6 - Extrae Factura Proveedor Id').item.json.chat_id }}",
+        "text": "=Factura {{ $('7 - Consulta Datos Factura Proveedor').item.json.numero_factura }} — {{ $('7 - Consulta Datos Factura Proveedor').item.json.proveedor }} — Saldo pendiente: ${{ $('7 - Consulta Datos Factura Proveedor').item.json.saldo_pendiente }}. ¿Cuánto vas a pagar? Escribe solo el número.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        -448
+      ],
+      "id": "7a7b9211-63ab-41ef-aac5-29835506dcf5",
+      "name": "9 - Pide Monto Proveedor",
+      "webhookId": "72da01f5-4029-4c5d-bd5e-9a6399f3912d",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const texto = $('Inicio').item.json.mensaje_usuario;\nconst monto = parseFloat(texto);\nconst datosTemp = JSON.parse($('Inicio').item.json.datos_temporales);\n\nconst esNumeroValido = !isNaN(monto) && monto > 0 && /^\\d+(\\.\\d{1,2})?$/.test(texto.trim());\nconst noExcedeSaldo = esNumeroValido && monto <= datosTemp.saldo_pendiente;\n\nreturn {\n  json: {\n    monto_valido: esNumeroValido && noExcedeSaldo,\n    excede_saldo: esNumeroValido && !noExcedeSaldo,\n    monto: esNumeroValido ? monto : null,\n    datos_temp: datosTemp,\n    chat_id: $('Inicio').item.json.chat_id\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -128
+      ],
+      "id": "86a556dc-4334-43e9-9c5b-42284ff9205f",
+      "name": "10 - Verifica Formato Monto Proveedor"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1153fe25-bfc7-41eb-b8ae-ab806bac39e9",
+              "leftValue": "={{ $json.monto_valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        656,
+        -128
+      ],
+      "id": "81ff8968-b763-471d-9f37-f79259e2b80f",
+      "name": "11 - IF Monto Proveedor Valido"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('10 - Verifica Formato Monto Proveedor').item.json.chat_id }}",
+        "text": "={{ $('10 - Verifica Formato Monto Proveedor').item.json.excede_saldo ? 'El monto no puede superar el saldo pendiente de $' + $('10 - Verifica Formato Monto Proveedor').item.json.datos_temp.saldo_pendiente + '. Escribe un monto menor.' : 'Por favor escribe solo un número válido (ej. 500 o 500.50).' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        -32
+      ],
+      "id": "632f7aea-ac8f-4667-9347-4676532559c8",
+      "name": "12 - Pide Monto Proveedor Correcto",
+      "webhookId": "beca4510-97c2-4a35-93cd-d3631b2e6667",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('10 - Verifica Formato Monto Proveedor').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_metodo_proveedor"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "=  {{ JSON.stringify({ ...$('10 - Verifica Formato Monto Proveedor').item.json.datos_temp, monto: $('10 - Verifica Formato Monto Proveedor').item.json.monto }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -240
+      ],
+      "id": "1bf7fb2e-0293-4956-bb20-5f8dec039559",
+      "name": "13 - Guarda Monto Proveedor y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('10 - Verifica Formato Monto Proveedor').item.json.chat_id }}\",\n  \"text\": \"Perfecto, vas a pagar ${{ $('10 - Verifica Formato Monto Proveedor').item.json.monto }}. ¿Cuál es el método de pago?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{ \"text\": \"Transferencia\", \"callback_data\": \"metodoprov:transferencia\" }],\n      [{ \"text\": \"Pago Móvil\", \"callback_data\": \"metodoprov:pago_movil\" }],\n      [{ \"text\": \"Zelle\", \"callback_data\": \"metodoprov:zelle\" }]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        -240
+      ],
+      "id": "e6b7a667-afd4-4683-bff7-45b77800dc55",
+      "name": "14 - Pide Metodo Proveedor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = $('Inicio').item.json.mensaje_usuario;\nconst metodo = mensaje.replace('metodoprov:', '');\nconst chat_id = $('Inicio').item.json.chat_id;\nconst datosTemp = JSON.parse($('Inicio').item.json.datos_temporales);\n\nconst metodosValidos = ['transferencia', 'pago_movil', 'zelle'];\nconst esValido = metodosValidos.includes(metodo);\n\nreturn {\n  json: {\n    metodo_valido: esValido,\n    metodo: esValido ? metodo : null,\n    chat_id: chat_id,\n    datos_temp: datosTemp\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        208
+      ],
+      "id": "61ea1d2f-9c36-4ea4-a005-0296992c75a9",
+      "name": "15 - Extrae Metodo Proveedor"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c8f03ef5-c599-4007-b843-e02e849a3260",
+              "leftValue": "={{ $json.metodo_valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        208
+      ],
+      "id": "4433951b-99fc-4aa1-bcea-c059f7f1789d",
+      "name": "16 - IF Metodo Proveedor Valido"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('15 - Extrae Metodo Proveedor').item.json.chat_id }}",
+        "text": "Por favor selecciona el método de pago usando los botones de arriba. ⬆️",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        320
+      ],
+      "id": "71f2806c-ee86-41ab-bd50-6b6c042db22e",
+      "name": "17 - Pide Usar Botones Metodo Proveedor",
+      "webhookId": "0b112a6a-d443-48f6-ba4e-1f7cf1bdb915",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('15 - Extrae Metodo Proveedor').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_referencia_proveedor"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "=  {{ JSON.stringify({ ...$('15 - Extrae Metodo Proveedor').item.json.datos_temp, metodo_pago: $('15 - Extrae Metodo Proveedor').item.json.metodo }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        864,
+        128
+      ],
+      "id": "9a22993e-02fa-4353-b71b-bc43720b1765",
+      "name": "18 - Guarda Metodo Proveedor y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('15 - Extrae Metodo Proveedor').item.json.chat_id }}",
+        "text": "Por último, escribe el número de referencia o confirmación del pago.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        128
+      ],
+      "id": "dd04d81c-8f14-4991-82d8-99278cd0341b",
+      "name": "19 - Pide Referencia Proveedor",
+      "webhookId": "08db1ec3-e757-47c7-aafa-b512e9788e06",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "=  {{ JSON.stringify({ ...JSON.parse($('Inicio').item.json.datos_temporales), referencia: $('Inicio').item.json.mensaje_usuario }) }}"
+            },
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_pdf_proveedor"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        432,
+        464
+      ],
+      "id": "42044294-7ad2-42be-992b-818d5c2b04a5",
+      "name": "20 - Guarda Referencia Proveedor y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Perfecto. Por último, envía una foto o el PDF del comprobante de pago.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        464
+      ],
+      "id": "5bf40673-b5ad-4f0f-ac1d-4e6926ba2a49",
+      "name": "21 - Pide Comprobante Proveedor",
+      "webhookId": "8a58936e-ccc9-4ec4-84b9-43a3116622e2",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d17f2c7f-27d0-4436-8e92-57bb1b35719e",
+              "leftValue": "={{ $('Inicio').item.json.es_archivo }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        752
+      ],
+      "id": "bc28478e-b641-4cbb-adde-182b14ea0c9e",
+      "name": "22 - Verifica Archivo Proveedor"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor envía una foto o el PDF del comprobante de pago para continuar con el proceso.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        848
+      ],
+      "id": "206a9640-de5d-4c98-8acf-bcb63b14f6ed",
+      "name": "23 - Pide Adjuntar Archivo Proveedor",
+      "webhookId": "0d0c1524-0eed-4216-be8f-fa1674914b2c",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/getFile?file_id={{ $('Inicio').item.json.file_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        640,
+        656
+      ],
+      "id": "d7a4160a-6ffc-4ea5-b81a-c3a422044b2f",
+      "name": "24 - Obtiene Info Archivo Proveedor"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot__TELEGRAM_BOT_TOKEN__/{{ $json.result.file_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        656
+      ],
+      "id": "8e5af06c-ae82-4373-a8bc-d9e5272f1e3f",
+      "name": "25 - Descarga Archivo Proveedor"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://__SUPABASE_PROJECT_REF__.supabase.co/storage/v1/object/comprobantes-pago/cxp/{{ $('Inicio').item.json.chat_id }}_{{ $now.toMillis() }}.jpg",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer __SUPABASE_SERVICE_ROLE_KEY__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "image/jpeg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1056,
+        656
+      ],
+      "id": "9e1d14b3-2e26-4ec1-acc7-42ccb41750bd",
+      "name": "26 - Sube Comprobante Proveedor a Storage"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "tableId": "scxp_pagos",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "factura_id",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).factura_id }}"
+            },
+            {
+              "fieldId": "monto",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).monto }}"
+            },
+            {
+              "fieldId": "metodo_pago",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).metodo_pago }}"
+            },
+            {
+              "fieldId": "referencia",
+              "fieldValue": "={{ JSON.parse($('Inicio').item.json.datos_temporales).referencia }}"
+            },
+            {
+              "fieldId": "url_comprobante",
+              "fieldValue": "={{ $json.Key }}"
+            },
+            {
+              "fieldId": "estado_verificacion",
+              "fieldValue": "pendiente"
+            },
+            {
+              "fieldId": "reportado_por",
+              "fieldValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        656
+      ],
+      "id": "5f486227-92cd-43a1-8d5b-75d31fec6e11",
+      "name": "27 - Guarda Pago Proveedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const datosTemp = JSON.parse($('Inicio').item.json.datos_temporales);\nconst pagoId = $('27 - Guarda Pago Proveedor').item.json.id;\n\nconst html = `\n  <h3>Nuevo pago reportado a proveedor</h3>\n  <p><strong>Factura:</strong> ${datosTemp.numero_factura}</p>\n  <p><strong>Proveedor:</strong> ${datosTemp.proveedor}</p>\n  <p><strong>Monto pagado:</strong> $${datosTemp.monto}</p>\n  <p><strong>Método:</strong> ${datosTemp.metodo_pago}</p>\n  <p><strong>Referencia:</strong> ${datosTemp.referencia}</p>\n  <br>\n  <p>\n    <a href=\"https://__N8N_HOST__/webhook/pago-proveedor-decision?pago_id=${pagoId}&accion=aprobar\" style=\"background:#22c55e;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">✅ Aprobar</a>\n    &nbsp;\n    <a href=\"https://__N8N_HOST__/webhook/pago-proveedor-decision?pago_id=${pagoId}&accion=rechazar\" style=\"background:#ef4444;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">❌ Rechazar</a>\n  </p>\n`;\n\nreturn {\n  json: {\n    gerente_email: $('27a - Consulta Email Gerente CxP').item.json.email,\n    asunto: `Nuevo pago a proveedor — ${datosTemp.proveedor} — $${datosTemp.monto}`,\n    html_body: html\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        656
+      ],
+      "id": "ca3426e9-e486-4e55-8116-e8ae1cc8010a",
+      "name": "28 - Arma Correo Gerente CxP"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.gerente_email }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1904,
+        656
+      ],
+      "id": "67d97094-ffeb-48d6-8057-cfaae9a0d9fe",
+      "name": "29 - Envia Correo Gerente CxP",
+      "webhookId": "00073d9a-3e99-4c63-b8c8-0b7b422451da",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "¡Listo! Tu pago fue reportado y está pendiente de aprobación. Te avisaremos cuando sea confirmado.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2112,
+        656
+      ],
+      "id": "3cdb9ec4-486f-458d-8b1a-dd80e195e6ac",
+      "name": "30 - Confirma Pago Proveedor Al Analista",
+      "webhookId": "5b1ccf88-d141-48e7-ba39-790587ea98e1",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo"
+            },
+            {
+              "fieldId": "paso_actual"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "{}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        656
+      ],
+      "id": "ba3dd229-861b-471d-80ae-98f9a07af7b2",
+      "name": "31 - Limpia Sesion Pago Proveedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "dashboard_usuarios",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "rol",
+              "condition": "eq",
+              "keyValue": "gerente_cxp"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        656
+      ],
+      "id": "c8ded8c0-5c56-4803-b04d-1d6ab19b61ca",
+      "name": "27a - Consulta Email Gerente CxP",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inicio": {
+      "main": [
+        [
+          {
+            "node": "Router - Enruta Paso Pago Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router - Enruta Paso Pago Proveedor": {
+      "main": [
+        [
+          {
+            "node": "1 - Consulta Facturas Proveedores Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "4 - Detecta Seleccion Factura Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10 - Verifica Formato Monto Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "15 - Extrae Metodo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "20 - Guarda Referencia Proveedor y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 - Verifica Archivo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Arma Lista Facturas Proveedores": {
+      "main": [
+        [
+          {
+            "node": "3a - Actualiza Sesion Pago Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3a - Actualiza Sesion Pago Proveedor": {
+      "main": [
+        [
+          {
+            "node": "3b - Envia Lista Facturas Proveedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 - Consulta Facturas Proveedores Pendientes": {
+      "main": [
+        [
+          {
+            "node": "2 - Arma Lista Facturas Proveedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - Detecta Seleccion Factura Proveedor": {
+      "main": [
+        [
+          {
+            "node": "6 - Extrae Factura Proveedor Id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5 - Pide Usar Botones Factura Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 - Pide Usar Botones Factura Proveedor": {
+      "main": [
+        []
+      ]
+    },
+    "6 - Extrae Factura Proveedor Id": {
+      "main": [
+        [
+          {
+            "node": "7 - Consulta Datos Factura Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Consulta Datos Factura Proveedor": {
+      "main": [
+        [
+          {
+            "node": "8 - Guarda Factura Proveedor Elegida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 - Guarda Factura Proveedor Elegida": {
+      "main": [
+        [
+          {
+            "node": "9 - Pide Monto Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Verifica Formato Monto Proveedor": {
+      "main": [
+        [
+          {
+            "node": "11 - IF Monto Proveedor Valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - IF Monto Proveedor Valido": {
+      "main": [
+        [
+          {
+            "node": "13 - Guarda Monto Proveedor y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "12 - Pide Monto Proveedor Correcto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Guarda Monto Proveedor y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "14 - Pide Metodo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 - Extrae Metodo Proveedor": {
+      "main": [
+        [
+          {
+            "node": "16 - IF Metodo Proveedor Valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 - IF Metodo Proveedor Valido": {
+      "main": [
+        [
+          {
+            "node": "18 - Guarda Metodo Proveedor y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "17 - Pide Usar Botones Metodo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 - Pide Usar Botones Metodo Proveedor": {
+      "main": [
+        []
+      ]
+    },
+    "18 - Guarda Metodo Proveedor y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "19 - Pide Referencia Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 - Guarda Referencia Proveedor y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "21 - Pide Comprobante Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 - Verifica Archivo Proveedor": {
+      "main": [
+        [
+          {
+            "node": "24 - Obtiene Info Archivo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "23 - Pide Adjuntar Archivo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24 - Obtiene Info Archivo Proveedor": {
+      "main": [
+        [
+          {
+            "node": "25 - Descarga Archivo Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "25 - Descarga Archivo Proveedor": {
+      "main": [
+        [
+          {
+            "node": "26 - Sube Comprobante Proveedor a Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "26 - Sube Comprobante Proveedor a Storage": {
+      "main": [
+        [
+          {
+            "node": "27 - Guarda Pago Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "27 - Guarda Pago Proveedor": {
+      "main": [
+        [
+          {
+            "node": "27a - Consulta Email Gerente CxP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "28 - Arma Correo Gerente CxP": {
+      "main": [
+        [
+          {
+            "node": "29 - Envia Correo Gerente CxP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "29 - Envia Correo Gerente CxP": {
+      "main": [
+        [
+          {
+            "node": "30 - Confirma Pago Proveedor Al Analista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "30 - Confirma Pago Proveedor Al Analista": {
+      "main": [
+        [
+          {
+            "node": "31 - Limpia Sesion Pago Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "27a - Consulta Email Gerente CxP": {
+      "main": [
+        [
+          {
+            "node": "28 - Arma Correo Gerente CxP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "983ce68e-7c3b-4011-ba0b-412ccdefe4be",
+  "nodeGroups": [],
+  "id": "kB1scpoICFfXrUqq",
+  "tags": []
+}

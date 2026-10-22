@@ -1,0 +1,1861 @@
+{
+  "name": "Nucleo Cobros",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1040,
+        16
+      ],
+      "id": "13a39ec1-fe7d-4f6b-b165-2956e69b63ae",
+      "name": "01 - Recibe Mensaje Telegram",
+      "webhookId": "522d2842-7746-40cd-8d25-050ca1d21421",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "db239647-6145-4d76-bd8a-a96027599801",
+              "leftValue": "={{ !!($json.message && ($json.message.voice || $json.message.audio)) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -832,
+        16
+      ],
+      "id": "b170a003-0a44-4ed0-8c02-bf6462a9ed43",
+      "name": "01a - IF Es Voz"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice ? $json.message.voice.file_id : $json.message.audio.file_id }}",
+        "download": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        -176
+      ],
+      "id": "00544256-e464-448b-9f52-d6342110c910",
+      "name": "01v1 - Descarga Audio Telegram",
+      "webhookId": "12586f58-15a1-4bd1-acf4-2bbaf9127067",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -176
+      ],
+      "id": "bc86b40e-8336-4558-babf-16a3eb02201d",
+      "name": "01v2 - Transcribe Audio Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte la nota de voz en un mensaje de texto normal,\n// para que el resto del flujo no note la diferencia.\nconst update = $('01 - Recibe Mensaje Telegram').item.json;\nconst r = $json;\nconst transcripcion = String(\n  r?.content?.parts?.[0]?.text ??\n  r?.candidates?.[0]?.content?.parts?.[0]?.text ??\n  r?.text ?? ''\n).trim();\n\nreturn {\n  json: {\n    ...update,\n    message: { ...update.message, text: transcripcion },\n    es_voz: true\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -176
+      ],
+      "id": "a4d7bb0f-815e-41fb-876f-f1476298ffb1",
+      "name": "01v3 - Inyecta Texto Transcrito"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "vista_sesion_activa",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('01b - Normaliza Entrada Telegram').item.json.chat_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        464,
+        0
+      ],
+      "id": "ae3236c4-0d89-496c-92d2-79177ea8f2fe",
+      "name": "02 - Consulta Sesion Activa",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "515e6bee-e7b2-4978-92af-4c2a08e5db3c",
+              "name": "tiene_sesion",
+              "value": "={{ $json.sesion_valida === true ? true : false }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        0
+      ],
+      "id": "01a55bf4-ac6a-494b-b31b-7ec26dfe0eb6",
+      "name": "03 - Normaliza Sesion Valida"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7509b917-e46c-467e-9fd9-c97e2c2546f3",
+              "leftValue": "={{ $json.tiene_sesion }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        0
+      ],
+      "id": "bd1d8f49-fc93-448f-9f8e-e6028f70ed0a",
+      "name": "04 - IF Tiene Sesion",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const datos = $('01b - Normaliza Entrada Telegram').item.json;\nconst texto = datos.texto_o_callback || '';\nconst patron = /^(\\S+@\\S+\\.\\S+)\\s+(.+)$/;\nconst match = texto.match(patron);\n\nif (match) {\n  return {\n    json: {\n      es_login: true,\n      email: match[1].trim(),\n      password: match[2].trim(),\n      chat_id: datos.chat_id\n    }\n  };\n} else {\n  return {\n    json: {\n      es_login: false,\n      chat_id: datos.chat_id\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "e64f3d00-b932-4c88-b6c0-00287012f97d",
+      "name": "05 - Detecta Formato Login"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "383a8ce9-5992-4804-8573-63c55b4c4a7c",
+              "leftValue": "={{ $json.es_login }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        224
+      ],
+      "id": "9d235977-f626-4531-84e1-f725ca90d529",
+      "name": "06 - IF Es Login"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "Para ingresar, por favor envía tu correo y contraseña separados por un espacio. Ejemplo: correo@empresa.com tucontraseña",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        336
+      ],
+      "id": "f41b7aee-8a22-4b52-8ecd-e766e3bb68be",
+      "name": "07 - Pide Credenciales",
+      "webhookId": "486a5320-9e8f-4059-aac2-3637f5287a9a",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "=cobros_demo",
+        "operation": "getAll",
+        "tableId": "usuarios",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            },
+            {
+              "keyName": "password_hash",
+              "condition": "eq",
+              "keyValue": "={{ $json.password }}"
+            },
+            {
+              "keyName": "acceso_bot_activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        128
+      ],
+      "id": "628705e3-6309-4fc0-ae01-d87c32bf6ec9",
+      "name": "08 - Valida Credenciales",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fd0960b4-146e-4765-871a-50bb36884bd8",
+              "name": "credenciales_ok",
+              "value": "={{ $json.id !== undefined }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1616,
+        128
+      ],
+      "id": "613e2731-caec-47f4-926d-89ab169d3821",
+      "name": "09 - Normaliza Credenciales Validas"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "857a67d9-78d8-4046-850b-4cb34cbe27ee",
+              "leftValue": "={{ $json.credenciales_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        128
+      ],
+      "id": "d06c5066-298c-44c6-b18f-123fdbff515f",
+      "name": "10 - IF Credenciales Validas"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "=cobros_demo",
+        "tableId": "bot_sesiones",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('05 - Detecta Formato Login').item.json.chat_id }}"
+            },
+            {
+              "fieldId": "usuario_id",
+              "fieldValue": "={{ $('08 - Valida Credenciales').item.json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        32
+      ],
+      "id": "192bdd84-6723-4622-835f-8db61f925073",
+      "name": "11 - Crea Sesion",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('05 - Detecta Formato Login').item.json.chat_id }}",
+        "text": "Correo o contraseña incorrectos. Por favor intenta de nuevo, enviando tu correo y contraseña separados por un espacio.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2144,
+        224
+      ],
+      "id": "61c0bbdb-b555-4a85-bd3e-f0650aa300e7",
+      "name": "13 - Rechaza Credenciales",
+      "webhookId": "74b091b7-2161-4510-871a-5827aef9712a",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6096ad4c-fc94-41d3-8fd7-c4f81cd1e671",
+              "name": "tipo_usuario",
+              "value": "={{ $('02 - Consulta Sesion Activa').item.json.tipo_usuario }}",
+              "type": "string"
+            },
+            {
+              "id": "298ff865-4b79-47d4-a119-8ea88846073a",
+              "name": "referencia_id",
+              "value": "={{ $('02 - Consulta Sesion Activa').item.json.referencia_id }}",
+              "type": "string"
+            },
+            {
+              "id": "b69b3263-b597-4c62-a24a-a18340c7b6ee",
+              "name": "chat_id",
+              "value": "={{ $('02 - Consulta Sesion Activa').item.json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9aca8535-bb92-4c97-bb30-9ee56fc3db09",
+              "name": "mensaje_usuario",
+              "value": "={{ $('01b - Normaliza Entrada Telegram').item.json.texto_o_callback }}",
+              "type": "string"
+            },
+            {
+              "id": "d576b177-7929-480b-ba99-89407bcb359f",
+              "name": "flujo_activo",
+              "value": "={{ $('13c - Consulta Estado Flujo Pago').item.json.flujo_activo }}",
+              "type": "string"
+            },
+            {
+              "id": "ac3955b4-fe46-4533-bd85-dd6b3d0c40a1",
+              "name": "paso_actual",
+              "value": "={{ $('13c - Consulta Estado Flujo Pago').item.json.paso_actual }}",
+              "type": "string"
+            },
+            {
+              "id": "0af481c5-3287-4b98-9673-6024084fa83b",
+              "name": "datos_temporales",
+              "value": "={{ $('13c - Consulta Estado Flujo Pago').item.json.datos_temporales }}",
+              "type": "string"
+            },
+            {
+              "id": "1bf403ea-2350-4f79-9e37-38a67c171d4f",
+              "name": "file_id",
+              "value": "={{ $('01b - Normaliza Entrada Telegram').item.json.file_id }}",
+              "type": "string"
+            },
+            {
+              "id": "ee69eb38-ecb8-46dd-b2da-165a18bac03b",
+              "name": "es_archivo",
+              "value": "={{ $('01b - Normaliza Entrada Telegram').item.json.es_archivo }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1248,
+        -304
+      ],
+      "id": "9ef41c35-7d19-4ff4-90a4-e54d36b73648",
+      "name": "14 - Extrae Datos Sesion"
+    },
+    {
+      "parameters": {
+        "jsCode": "const update = $input.item.json;\nconst esCallback = update.callback_query !== undefined;\n\nif (esCallback) {\n  return {\n    json: {\n      es_callback: true,\n      chat_id: update.callback_query.message.chat.id.toString(),\n      texto_o_callback: update.callback_query.data,\n      callback_query_id: update.callback_query.id,\n      message_id: update.callback_query.message.message_id,\n      file_id: null,\n      es_archivo: false\n    }\n  };\n} else {\n  const msg = update.message;\n  let file_id = null;\n  let es_archivo = false;\n\n  if (msg.photo && msg.photo.length > 0) {\n    file_id = msg.photo[msg.photo.length - 1].file_id;\n    es_archivo = true;\n  } else if (msg.document) {\n    file_id = msg.document.file_id;\n    es_archivo = true;\n  }\n\n  return {\n    json: {\n      es_callback: false,\n      chat_id: msg.chat.id.toString(),\n      texto_o_callback: msg.text || '',\n      callback_query_id: null,\n      message_id: msg.message_id,\n      file_id: file_id,\n      es_archivo: es_archivo\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        16
+      ],
+      "id": "745882af-648f-492b-9058-277651e7dfb0",
+      "name": "01b - Normaliza Entrada Telegram"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "delete",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('05 - Detecta Formato Login').item.json.chat_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        32
+      ],
+      "id": "5a76a88a-64f6-41b2-8184-960c171965f4",
+      "name": "10b - Elimina Sesion Previa",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9a91d0c2-1bf2-417f-af87-4ba57673f68f",
+              "leftValue": "={{ $('08 - Valida Credenciales').item.json.tipo_usuario === 'vendedor' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2320,
+        -624
+      ],
+      "id": "f8a2f54f-cb09-47f6-9212-704bbcdf29ee",
+      "name": "11b - IF Es Vendedor"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('05 - Detecta Formato Login').item.json.chat_id }}",
+        "text": "={{ $('08 - Valida Credenciales').item.json.tipo_usuario === 'vendedor' ? '¡Bienvenido, ' + $('08 - Valida Credenciales').item.json.email + '! Selecciona una opcion:' : '¡Bienvenido! Selecciona una opcion:' }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📊 Ver mi cartera",
+                    "additionalFields": {
+                      "callback_data": "ver_cartera_vendedor"
+                    }
+                  },
+                  {
+                    "text": "⚠️ Facturas vencidas",
+                    "additionalFields": {
+                      "callback_data": "ver_vencidas_vendedor"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2656,
+        -192
+      ],
+      "id": "546bb380-a1fb-4240-a970-ede07b1e53b3",
+      "name": "12a - Confirma Login Vendedor",
+      "webhookId": "463af357-29e5-4052-81aa-b257e8b28b60",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('05 - Detecta Formato Login').item.json.chat_id }}",
+        "text": "¡Bienvenido! Selecciona una opcion:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Ver mis facturas",
+                    "additionalFields": {
+                      "callback_data": "ver_facturas_cliente"
+                    }
+                  },
+                  {
+                    "text": "Reportar un pago",
+                    "additionalFields": {
+                      "callback_data": "reportar_pago"
+                    }
+                  },
+                  {
+                    "text": "Generar pedido",
+                    "additionalFields": {
+                      "callback_data": "iniciar_pedido"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2672,
+        288
+      ],
+      "id": "2162162d-8a8f-4011-b537-fc8fef8708f4",
+      "name": "12b - Confirma Login Cliente",
+      "webhookId": "444bca0a-4147-4392-84bf-59c9c50fd3e2",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "bot_sesiones",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('01b - Normaliza Entrada Telegram').item.json.chat_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -304
+      ],
+      "id": "8bbb6145-dde7-4935-8935-33f8fb86c50a",
+      "name": "13c - Consulta Estado Flujo Pago",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "OkHnS0d0f77NCyTt",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/OkHnS0d0f77NCyTt",
+          "cachedResultName": "Módulo Cobros - Consultas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('14 - Extrae Datos Sesion').item.json.referencia_id }}",
+            "chat_id": "={{ $('14 - Extrae Datos Sesion').item.json.chat_id }}",
+            "mensaje_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.mensaje_usuario }}",
+            "flujo_activo": "={{ $('14 - Extrae Datos Sesion').item.json.flujo_activo }}",
+            "paso_actual": "={{ $('14 - Extrae Datos Sesion').item.json.paso_actual }}",
+            "datos_temporales": "={{ $('14 - Extrae Datos Sesion').item.json.datos_temporales }}",
+            "file_id": "={{ $('14 - Extrae Datos Sesion').item.json.file_id }}",
+            "es_archivo": "={{ $('14 - Extrae Datos Sesion').item.json.es_archivo }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        -96
+      ],
+      "id": "76fc8124-7287-407c-aa98-59aff675f2e8",
+      "name": "Call 'Módulo Cobros - Consultas'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "QD8g5HWSUDhehSw3",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/QD8g5HWSUDhehSw3",
+          "cachedResultName": "Módulo Cobros - Reportar Pago"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('14 - Extrae Datos Sesion').item.json.referencia_id }}",
+            "chat_id": "={{ $('14 - Extrae Datos Sesion').item.json.chat_id }}",
+            "mensaje_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.mensaje_usuario }}",
+            "flujo_activo": "={{ $('14 - Extrae Datos Sesion').item.json.flujo_activo }}",
+            "paso_actual": "={{ $('14 - Extrae Datos Sesion').item.json.paso_actual }}",
+            "datos_temporales": "={{ $('14 - Extrae Datos Sesion').item.json.datos_temporales }}",
+            "file_id": "={{ $('14 - Extrae Datos Sesion').item.json.file_id }}",
+            "es_archivo": "={{ $('14 - Extrae Datos Sesion').item.json.es_archivo }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        -720
+      ],
+      "id": "38ec0189-4227-4bd0-b544-7a7aa0681c88",
+      "name": "Call 'Módulo Cobros - Reportar Pago'"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "91631ca4-0458-402c-be73-e908a6ac73cc",
+                    "leftValue": "={{ $json.flujo_activo === 'reportando_pago' || $json.mensaje_usuario === 'reportar_pago' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bad22bde-d8dd-4dfa-bc2a-347882789045",
+                    "leftValue": "={{ $json.flujo_activo === 'armando_pedido' || $json.mensaje_usuario === 'iniciar_pedido' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "51d65e54-bc2c-4086-81b1-b20632e1b484",
+                    "leftValue": "={{ $json.flujo_activo === 'pagando_proveedor' || $json.mensaje_usuario === 'iniciar_pago_proveedor' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1456,
+        -336
+      ],
+      "id": "0c1d90f1-0bd8-448c-83ea-34624655183e",
+      "name": "04b - Enruta Segun Flujo"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "licencias_modulos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "__CLIENTE_ID__"
+            },
+            {
+              "keyName": "modulo",
+              "condition": "eq",
+              "keyValue": "cobros"
+            },
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        16,
+        16
+      ],
+      "id": "9eeed95c-0ff7-4e81-b69d-19d035dbb1f6",
+      "name": "14b - Consulta Licencia Cobros",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('01b - Normaliza Entrada Telegram').item.json.chat_id }}",
+        "text": "Hola, en este momento no tenemos acceso a este servicio automatizado disponible para tu cuenta.  Por favor contacta directamente a tu asesor comercial o al departamento de cobranza para continuar con tu consulta.  Gracias por tu comprensión.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        240
+      ],
+      "id": "a81f063c-641e-439c-84fd-66bb9f3bbf36",
+      "name": "Responde Sin Licencia",
+      "webhookId": "54b87ded-b9b7-4dd5-a7d3-47a215160717",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d6b66f17-b11c-49fb-bd20-7764913c960b",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        16
+      ],
+      "id": "428b2d5a-a604-45bb-aaad-19b3084eee4f",
+      "name": "14c - If (Tiene Licencia)"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CHRjo226xywEZcK5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/CHRjo226xywEZcK5",
+          "cachedResultName": "Módulo Ventas - Pedido"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('14 - Extrae Datos Sesion').item.json.referencia_id }}",
+            "chat_id": "={{ $('14 - Extrae Datos Sesion').item.json.chat_id }}",
+            "mensaje_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.mensaje_usuario }}",
+            "flujo_activo": "={{ $('14 - Extrae Datos Sesion').item.json.flujo_activo }}",
+            "paso_actual": "={{ $('14 - Extrae Datos Sesion').item.json.paso_actual }}",
+            "datos_temporales": "={{ $('14 - Extrae Datos Sesion').item.json.datos_temporales }}",
+            "file_id": "={{ $('14 - Extrae Datos Sesion').item.json.file_id }}",
+            "es_archivo": "={{ $('14 - Extrae Datos Sesion').item.json.es_archivo }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        -496
+      ],
+      "id": "84148c7d-9668-487a-b7d9-4343666e6c97",
+      "name": "Call 'Módulo Ventas - Pedido'"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('08 - Valida Credenciales').item.json.tipo_usuario }}",
+                    "rightValue": "vendedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "404a5487-460d-40e0-b857-2ebd165818ee"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bc0f1595-18ee-4876-ba93-1cd614bb90b6",
+                    "leftValue": "={{ $('08 - Valida Credenciales').item.json.tipo_usuario }}",
+                    "rightValue": "analista_cxp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2384,
+        32
+      ],
+      "id": "92ba9665-02db-4124-838a-bca874d5d2c6",
+      "name": "11b - Enruta Segun Tipo Usuario"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "¡Bienvenido, analista de Cuentas por Pagar! Puedes preguntarme por facturas de proveedores pendientes o reportar un pago realizado.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Ver facturas de proveedores",
+                    "additionalFields": {
+                      "callback_data": "consultar_facturas_proveedores"
+                    }
+                  },
+                  {
+                    "text": "Reportar pago a proveedo",
+                    "additionalFields": {
+                      "callback_data": "iniciar_pago_proveedor"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2656,
+        48
+      ],
+      "id": "d4af5743-e88b-47c2-805f-eed25db4b9d8",
+      "name": "12c - Confirma Login Analista CxP",
+      "webhookId": "ce80bf84-62d3-49ef-ba05-6fa0f8b7a3a2",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kB1scpoICFfXrUqq",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kB1scpoICFfXrUqq",
+          "cachedResultName": "Módulo CxP - Reportar Pago"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('14 - Extrae Datos Sesion').item.json.referencia_id }}",
+            "chat_id": "={{ $('14 - Extrae Datos Sesion').item.json.chat_id }}",
+            "mensaje_usuario": "={{ $('14 - Extrae Datos Sesion').item.json.mensaje_usuario }}",
+            "flujo_activo": "={{ $('14 - Extrae Datos Sesion').item.json.flujo_activo }}",
+            "paso_actual": "={{ $('14 - Extrae Datos Sesion').item.json.paso_actual }}",
+            "datos_temporales": "={{ $('14 - Extrae Datos Sesion').item.json.datos_temporales }}",
+            "file_id": "={{ $('14 - Extrae Datos Sesion').item.json.file_id }}",
+            "es_archivo": "={{ $('14 - Extrae Datos Sesion').item.json.es_archivo }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        -288
+      ],
+      "id": "6c46fd0e-671b-42db-af73-2661ee9e02fb",
+      "name": "Call 'Módulo CxP - Reportar Pago'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 - Recibe Mensaje Telegram": {
+      "main": [
+        [
+          {
+            "node": "01a - IF Es Voz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Consulta Sesion Activa": {
+      "main": [
+        [
+          {
+            "node": "03 - Normaliza Sesion Valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Normaliza Sesion Valida": {
+      "main": [
+        [
+          {
+            "node": "04 - IF Tiene Sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - IF Tiene Sesion": {
+      "main": [
+        [
+          {
+            "node": "13c - Consulta Estado Flujo Pago",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05 - Detecta Formato Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Detecta Formato Login": {
+      "main": [
+        [
+          {
+            "node": "06 - IF Es Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - IF Es Login": {
+      "main": [
+        [
+          {
+            "node": "08 - Valida Credenciales",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "07 - Pide Credenciales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Valida Credenciales": {
+      "main": [
+        [
+          {
+            "node": "09 - Normaliza Credenciales Validas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 - Normaliza Credenciales Validas": {
+      "main": [
+        [
+          {
+            "node": "10 - IF Credenciales Validas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - IF Credenciales Validas": {
+      "main": [
+        [
+          {
+            "node": "10b - Elimina Sesion Previa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "13 - Rechaza Credenciales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - Crea Sesion": {
+      "main": [
+        [
+          {
+            "node": "11b - Enruta Segun Tipo Usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 - Extrae Datos Sesion": {
+      "main": [
+        [
+          {
+            "node": "04b - Enruta Segun Flujo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01b - Normaliza Entrada Telegram": {
+      "main": [
+        [
+          {
+            "node": "14b - Consulta Licencia Cobros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10b - Elimina Sesion Previa": {
+      "main": [
+        [
+          {
+            "node": "11 - Crea Sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11b - IF Es Vendedor": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "13c - Consulta Estado Flujo Pago": {
+      "main": [
+        [
+          {
+            "node": "14 - Extrae Datos Sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04b - Enruta Segun Flujo": {
+      "main": [
+        [
+          {
+            "node": "Call 'Módulo Cobros - Reportar Pago'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Módulo Ventas - Pedido'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Módulo CxP - Reportar Pago'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Módulo Cobros - Consultas'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14b - Consulta Licencia Cobros": {
+      "main": [
+        [
+          {
+            "node": "14c - If (Tiene Licencia)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14c - If (Tiene Licencia)": {
+      "main": [
+        [
+          {
+            "node": "02 - Consulta Sesion Activa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responde Sin Licencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11b - Enruta Segun Tipo Usuario": {
+      "main": [
+        [
+          {
+            "node": "12a - Confirma Login Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "12c - Confirma Login Analista CxP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "12b - Confirma Login Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01a - IF Es Voz": {
+      "main": [
+        [
+          {
+            "node": "01v1 - Descarga Audio Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "01b - Normaliza Entrada Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01v1 - Descarga Audio Telegram": {
+      "main": [
+        [
+          {
+            "node": "01v2 - Transcribe Audio Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01v2 - Transcribe Audio Gemini": {
+      "main": [
+        [
+          {
+            "node": "01v3 - Inyecta Texto Transcrito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01v3 - Inyecta Texto Transcrito": {
+      "main": [
+        [
+          {
+            "node": "01b - Normaliza Entrada Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7c2d034f-b3ba-4599-af45-d0013c5bc075",
+  "nodeGroups": [],
+  "id": "CEkWdVavNYpoE1CL",
+  "tags": []
+}

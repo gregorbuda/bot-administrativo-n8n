@@ -1,0 +1,547 @@
+{
+  "name": "Webhook Aprobacion Pago Proveedor",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "pago-proveedor-decision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "68638e45-f0ba-45dc-bb9c-50d05c4350f3",
+      "name": "1 - Webhook",
+      "webhookId": "afb9c597-eb6e-4b8f-b54f-5ee0573191d5"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.item.json.query;\nreturn {\n  json: {\n    pago_id: query.pago_id,\n    accion: query.accion\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e44fdace-6782-417e-a254-99ab8c8892ef",
+      "name": "2 - Extrae Parametros"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxp_pagos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.pago_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "32a34fcf-5ae9-464c-9cab-a090e9015fff",
+      "name": "3 - Consulta Pago Actual",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "eab5af21-f743-4a96-b888-505fce5c6573",
+              "leftValue": "={{ $json.estado_verificacion }}",
+              "rightValue": "pendiente",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "32483079-7587-4c83-bb01-ea2a893a2247",
+      "name": "4 - IF Ya Procesado"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<h2>Este pago ya fue procesado anteriormente.</h2>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "75adba9a-c549-4b7c-80b5-737b95ed5228",
+      "name": "5 - Responde Ya Procesado"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d043895c-83a4-49bc-8084-bd18194f0d95",
+              "leftValue": "={{ $('2 - Extrae Parametros').item.json.accion }}",
+              "rightValue": "aprobar",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        208
+      ],
+      "id": "ea1384d6-db43-4f16-a059-d7ff1d0631b9",
+      "name": "6 - IF Accion Es Aprobar"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "scxp_pagos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Pago Actual').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado_verificacion",
+              "fieldValue": "verificado"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        48
+      ],
+      "id": "116c699a-16e0-4ed9-a8d5-3b6dbe8bd66d",
+      "name": "7 - Actualiza Pago Aprobado",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxp_facturas",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Pago Actual').item.json.factura_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        48
+      ],
+      "id": "11af35a0-747c-4fbd-956a-96875e49b911",
+      "name": "8 - Consulta Factura Proveedor Actual",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const facturaActual = $json;\nconst montoPago = $('3 - Consulta Pago Actual').item.json.monto;\n\nconst nuevoMontoPagado = Number(facturaActual.monto_pagado) + Number(montoPago);\nconst nuevoEstado = nuevoMontoPagado >= facturaActual.monto_total ? 'pagada' : 'pendiente';\n\nreturn {\n  json: {\n    factura_id: facturaActual.id,\n    nuevo_monto_pagado: nuevoMontoPagado,\n    nuevo_estado: nuevoEstado\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        48
+      ],
+      "id": "fe9f7d56-7bc9-4c80-8bed-2a453593c259",
+      "name": "9 - Calcula Nuevo Monto Pagado Proveedor"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "scxp_facturas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.factura_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "monto_pagado",
+              "fieldValue": "={{ $json.nuevo_monto_pagado }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.nuevo_estado }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        48
+      ],
+      "id": "5d3fcd9f-cc14-494c-bf5f-e2fbb1774f25",
+      "name": "10 - Actualiza Factura Proveedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('3 - Consulta Pago Actual').item.json.reportado_por }}",
+        "text": "=¡Tu pago a proveedor fue aprobado! Monto: $${{ $('3 - Consulta Pago Actual').item.json.monto }}. La factura fue actualizada correctamente.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1904,
+        48
+      ],
+      "id": "7292e977-ee82-4e4f-b567-6d16e8680e43",
+      "name": "11 - Notifica Analista Pago Aprobado",
+      "webhookId": "d2d41d93-d276-4c7c-ad5c-7bedc8af9b7a",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<h2>✅ Pago aprobado correctamente</h2>\n<p>La factura fue actualizada y el analista fue notificado.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2112,
+        48
+      ],
+      "id": "1fd4b55a-5709-4122-b351-a5905be60f7d",
+      "name": "12 - Responde Aprobado"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "scxp_pagos",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Pago Actual').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado_verificacion",
+              "fieldValue": "rechazado"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        272
+      ],
+      "id": "dca8994d-7f24-487b-97c7-4b7fca59ea70",
+      "name": "13 - Rechaza Pago Proveedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('3 - Consulta Pago Actual').item.json.reportado_por }}",
+        "text": "Tu pago a proveedor no pudo ser aprobado en esta ocasión. Por favor contacta al gerente de Cuentas por Pagar para más información.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        272
+      ],
+      "id": "90bfcfd2-2f91-471c-91b6-3db64d96881b",
+      "name": "14 - Notifica Analista Pago Rechazado",
+      "webhookId": "b9ef87dd-c1c9-4579-b1e0-36989c8aa21a",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<h2>❌ Pago rechazado</h2>\n<p>El analista fue notificado.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1504,
+        272
+      ],
+      "id": "3716f5fb-2e89-418f-8c73-9fa75c247b14",
+      "name": "15 - Responde Rechazado"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "1 - Webhook": {
+      "main": [
+        [
+          {
+            "node": "2 - Extrae Parametros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Extrae Parametros": {
+      "main": [
+        [
+          {
+            "node": "3 - Consulta Pago Actual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 - Consulta Pago Actual": {
+      "main": [
+        [
+          {
+            "node": "4 - IF Ya Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - IF Ya Procesado": {
+      "main": [
+        [
+          {
+            "node": "5 - Responde Ya Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "6 - IF Accion Es Aprobar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6 - IF Accion Es Aprobar": {
+      "main": [
+        [
+          {
+            "node": "7 - Actualiza Pago Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "13 - Rechaza Pago Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 - Consulta Factura Proveedor Actual": {
+      "main": [
+        [
+          {
+            "node": "9 - Calcula Nuevo Monto Pagado Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9 - Calcula Nuevo Monto Pagado Proveedor": {
+      "main": [
+        [
+          {
+            "node": "10 - Actualiza Factura Proveedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Actualiza Factura Proveedor": {
+      "main": [
+        [
+          {
+            "node": "11 - Notifica Analista Pago Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - Notifica Analista Pago Aprobado": {
+      "main": [
+        [
+          {
+            "node": "12 - Responde Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Actualiza Pago Aprobado": {
+      "main": [
+        [
+          {
+            "node": "8 - Consulta Factura Proveedor Actual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Rechaza Pago Proveedor": {
+      "main": [
+        [
+          {
+            "node": "14 - Notifica Analista Pago Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 - Notifica Analista Pago Rechazado": {
+      "main": [
+        [
+          {
+            "node": "15 - Responde Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "bdcf7333-8123-48fc-9d43-771b7ed86b7f",
+  "nodeGroups": [],
+  "id": "a2kfcJ4Jngx8gN5M",
+  "tags": []
+}

@@ -1,0 +1,1328 @@
+{
+  "name": "Módulo Cobros - Consultas",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "Claude Haiku 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        112,
+        -496
+      ],
+      "id": "bdf0946c-5490-459c-9657-fe93bb647d59",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').first().json.chat_id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -512,
+        -544
+      ],
+      "id": "8198c89b-9d68-48ce-b1ec-57435749a4db",
+      "name": "16 - Envia Respuesta Agent",
+      "webhookId": "6e342ae1-8b09-4294-b6c0-d779896e9bed",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Inicio').first().json.chat_id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        -496
+      ],
+      "id": "86260d75-52bd-4c62-b76f-8b427854acfe",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -736,
+        -624
+      ],
+      "id": "9412316d-a483-40f4-9525-42ed834cc0ab",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_aging",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vendedor_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.referencia_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        432,
+        32
+      ],
+      "id": "4ab7b72d-d5e2-4dae-ba2b-d9a1f1bc3cb0",
+      "name": "Tool_Consulta_Cartera_Vendedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_aging",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').first().json.referencia_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -496
+      ],
+      "id": "6e462a03-05ce-4af7-8e71-7cfbdddc4e0d",
+      "name": "Tool_Consulta_Facturas_Cliente",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sinv_productos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        32
+      ],
+      "id": "c3402622-73f6-40f8-9a65-71d0964bf8fe",
+      "name": "Tool_Consulta_Stock_Productos",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "QD8g5HWSUDhehSw3",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/QD8g5HWSUDhehSw3",
+          "cachedResultName": "Módulo Cobros - Reportar Pago"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('Inicio').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('Inicio').item.json.referencia_id || '' }}",
+            "chat_id": "={{ $('Inicio').item.json.chat_id }}",
+            "mensaje_usuario": "reportar_pago",
+            "datos_temporales": "{}",
+            "es_archivo": "false"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        -496
+      ],
+      "id": "8ab0a85e-583d-4aea-973a-ab3ee8a74a73",
+      "name": "Tool_Iniciar_Reporte_Pago"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sinv_productos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        32
+      ],
+      "id": "c095e4a9-fdba-47e5-bfbc-142aa253b16b",
+      "name": "Tool_Cotizacion_Productos",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const texto = $json.output\n  .replace(/\\\\n/g, '\\n')  // convierte \\n literal a salto de línea real\n  .replace(/\\*\\*/g, '')   // quita negritas markdown\n  .replace(/^\\* /gm, '- '); // convierte viñetas * a guiones simples\n\nreturn { json: { output: texto } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        -192
+      ],
+      "id": "117417c2-33d3-48d8-a9c0-855242446cb2",
+      "name": "15f - Limpia Formato Respuesta"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tipo_usuario"
+            },
+            {
+              "name": "referencia_id"
+            },
+            {
+              "name": "chat_id"
+            },
+            {
+              "name": "mensaje_usuario"
+            },
+            {
+              "name": "flujo_activo"
+            },
+            {
+              "name": "paso_actual"
+            },
+            {
+              "name": "datos_temporales"
+            },
+            {
+              "name": "file_id"
+            },
+            {
+              "name": "es_archivo"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        -192
+      ],
+      "id": "862e0d9b-2969-4b1b-88bd-ef164c78a096",
+      "name": "Inicio"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CHRjo226xywEZcK5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/CHRjo226xywEZcK5",
+          "cachedResultName": "Módulo Ventas - Pedido"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('Inicio').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('Inicio').item.json.referencia_id }}",
+            "chat_id": "={{ $('Inicio').item.json.chat_id }}",
+            "mensaje_usuario": "iniciar_pedido",
+            "datos_temporales": "{}",
+            "es_archivo": "false"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        -496
+      ],
+      "id": "197bf9da-d9b3-4518-878b-9141e3739f88",
+      "name": "Call 'Módulo Ventas - Pedido'"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxp_vista_facturas",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "estado",
+              "condition": "eq",
+              "keyValue": "pendiente"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        640,
+        480
+      ],
+      "id": "770d57b1-6807-4dda-8e4b-2b2bc19a22bd",
+      "name": "Tool_Consulta_Facturas_Proveedores",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kB1scpoICFfXrUqq",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kB1scpoICFfXrUqq",
+          "cachedResultName": "Módulo CxP - Reportar Pago"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tipo_usuario": "={{ $('Inicio').item.json.tipo_usuario }}",
+            "referencia_id": "={{ $('Inicio').item.json.referencia_id || '' }}",
+            "chat_id": "={{ $('Inicio').item.json.chat_id }}",
+            "mensaje_usuario": "iniciar_pago_proveedor",
+            "datos_temporales": "{}",
+            "es_archivo": "false"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo_usuario",
+              "displayName": "tipo_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "referencia_id",
+              "displayName": "referencia_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mensaje_usuario",
+              "displayName": "mensaje_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "flujo_activo",
+              "displayName": "flujo_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "datos_temporales",
+              "displayName": "datos_temporales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "es_archivo",
+              "displayName": "es_archivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        480
+      ],
+      "id": "ac13458a-e5b8-4641-9bf6-8fdb27605002",
+      "name": "Tool_Iniciar_Reporte_Pago_Proveedor"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $('Inicio').first().json.chat_id, text: $('15f - Limpia Formato Respuesta').item.json.output }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1920,
+        -192
+      ],
+      "id": "aadc663c-d209-436e-8d8c-46d902e1554c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "h8bupIxZv06rsgV5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/h8bupIxZv06rsgV5",
+          "cachedResultName": "Módulo Cobros - Aviso Deuda Cliente"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "vendedor_id": "={{ $('Inicio').item.json.referencia_id }}",
+            "nombre_cliente": "={{ $fromAI('nombre_cliente', ``, 'string') }}",
+            "numero_factura": "={{ $fromAI('numero_factura', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "vendedor_id",
+              "displayName": "vendedor_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nombre_cliente",
+              "displayName": "nombre_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "numero_factura",
+              "displayName": "numero_factura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        32
+      ],
+      "id": "12c3c1e6-c7cd-4500-9267-1c80b79518df",
+      "name": "Tool_Enviar_Aviso_Deuda_Cliente"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_cobros",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.referencia_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -496
+      ],
+      "id": "8d3503eb-96c4-4e60-98bd-024697e29f6e",
+      "name": "Tool_Consulta_Historial_Pagos_Cliente",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_cobros",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vendedor_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.referencia_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        624,
+        32
+      ],
+      "id": "114f15b4-3c9e-4d30-90b3-9acfad76ae5e",
+      "name": "Tool_Consulta_Historial_Pagos_Vendedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Inicio').item.json.tipo_usuario }}",
+                    "rightValue": "cliente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4b1001ef-4aaa-4ab9-8b56-c50170050b58"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c782ce4b-81f9-4882-8d59-5592d49e38fc",
+                    "leftValue": "={{ $('Inicio').item.json.tipo_usuario }}",
+                    "rightValue": "vendedor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a53b49d0-c838-48f4-83da-e561747523ba",
+                    "leftValue": "={{ $('Inicio').item.json.tipo_usuario }}",
+                    "rightValue": "analista_cxp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -208,
+        -208
+      ],
+      "id": "7fe73874-e2c3-4dc7-9e35-24045fd60118",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensaje_usuario === 'ver_facturas_cliente' ? 'Por favor ejecuta tu herramienta para consultar y mostrar mis facturas pendientes' : $json.mensaje_usuario }}",
+        "options": {
+          "systemMessage": "Eres un asistente de cobros y ventas exclusivo para clientes de la empresa. \nTu tono debe ser formal y cortés. Nunca muestres información de otros clientes ni reveles datos que no sean estrictamente los del cliente conectado.\n\n=== CLARIDAD SOBRE DEUDA REAL VS HISTORIAL ===\n- Cuando el cliente pregunte \"tengo más deudas\", \"es esa toda mi deuda\", \"solo tengo esa\", \"cuanto debo en total\", o similar:\n- Tu PRIMERA PALABRA debe ser literalmente \"Sí,\" o \"No,\".\n- Responde \"No,\" si SOLO existe UNA factura con saldo pendiente mayor a 0.\n- Responde \"Sí,\" si existe MAS DE UNA factura con saldo pendiente mayor a 0.\n- Las facturas con estado 'Pagada', saldo en 0 o negativo NUNCA cuentan como \"más deudas\" (son historial).\n- NUNCA sugieras que el cliente verifique con su vendedor externo; tú ya tienes el dato de la base de datos.\n\n=== HISTORIAL DE PAGOS ===\n- Muestra los pagos en formato de tabla (fecha, factura, monto, método, estado).\n- Muestra SIEMPRE el 'estado_verificacion' (pendiente, verificado o rechazado). Si está rechazado, indícalo brevemente.\n\n=== DATOS DEL VENDEDOR ===\n- Si el cliente pregunta quién es su vendedor o sus datos, la herramienta de facturas incluye el campo 'vendedor' con el nombre real. USA ESE DATO. Nunca digas que no tienes acceso.\n\n=== CONSULTA DE PRODUCTOS Y COTIZACIONES ===\n- Puedes informar sobre precio y disponibilidad de productos.\n- Para cotizar, calcula tú mismo el subtotal (precio unitario x cantidad). Si excede el stock, indícalo.\n- Aclara que la cotización es SOLO informativa.\n\n=== ACCIONES AUTOMATIZADAS (REPORTAR PAGO Y PEDIDOS) ===\n- Si el cliente quiere REPORTAR UN PAGO conversando, usa la herramienta correspondiente. Responde solo con una línea breve: \"Aquí tienes tus facturas pendientes, elige una para continuar.\" NO listes las facturas tú mismo.\n- Si el cliente quiere INICIAR UN PEDIDO (comprar) conversando, usa la herramienta correspondiente. Responde solo con una línea breve de transición. NO listes los productos tú mismo.\n\n=== REGLAS GENERALES ===\n- Responde siempre en español.\n- Nunca digas que \"registraste\" o \"guardaste\" algo si no existe una herramienta para ello."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        144,
+        -736
+      ],
+      "id": "204f2773-1af9-41b3-9ff3-1d43b808c627",
+      "name": "AI Agent Cliente"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensaje_usuario === 'ver_cartera_vendedor' ? 'Por favor ejecuta tu herramienta para consultar y mostrar mi cartera de clientes' : ($json.mensaje_usuario === 'ver_vencidas_vendedor' ? 'Por favor consulta mi cartera y muéstrame solo las facturas vencidas' : $json.mensaje_usuario) }}",
+        "options": {
+          "systemMessage": "Eres un asistente de cobros y ventas para el equipo de vendedores de la empresa. \nTu tono debe ser directo, profesional, orientado a la acción y gestión de cobranza.\n\n=== CONSULTA DE CARTERA ===\n- Presenta la información de los clientes de forma organizada (usa tablas cuando aplique).\n- Si detectas facturas con mora alta (+60 días), destácalas como prioritarias para el vendedor.\n\n=== HISTORIAL DE PAGOS ===\n- Al consultar pagos de clientes, muestra la información en tabla (fecha, factura, monto, método, estado).\n- Muestra SIEMPRE el 'estado_verificacion' (pendiente, verificado o rechazado).\n\n=== AVISOS DE DEUDA A CLIENTES ===\n- Si pides enviar un aviso/correo de deuda a un cliente, PRIMERO determina el alcance:\n  1. Si menciona una factura específica -> procede directo con esa factura.\n  2. Si dice explícitamente \"todas las deudas\" o \"el total\" -> procede con todas.\n  3. Si NO especifica (ej. \"avísale a X que tiene deuda\") -> PREGUNTA PRIMERO: \"¿Quieres que le avise de todas sus deudas pendientes, o de una factura específica?\" antes de usar la herramienta.\n- Extrae el nombre del cliente exactamente como lo mencionó el vendedor.\n- EJECUTA la herramienta cada vez que se pida, sin importar si ya se envió antes en el chat. Nunca digas \"ya fue enviado\" basándote en la memoria. Confía en el resultado de la herramienta y repórtalo brevemente.\n\n=== CONSULTA DE PRODUCTOS Y COTIZACIONES ===\n- Puedes buscar disponibilidad y precio de productos para el vendedor.\n- Si el vendedor quiere cotizar para un cliente, calcula el subtotal (precio unitario x cantidad).\n- Aclara que las cotizaciones son informativas y no generan un pedido automático.\n\n=== REGLAS GENERALES ===\n- Las opciones de \"iniciar pedido\" o \"reportar pago\" son exclusivas de la interfaz de clientes por ahora.\n- Responde siempre en español.\n- Nunca digas que \"registraste\" una acción si no usaste una herramienta para ello."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        144,
+        -192
+      ],
+      "id": "7d92592f-b98a-487a-b806-5667eb797059",
+      "name": "AI Agente Vendedor"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensaje_usuario === 'consultar_facturas_proveedores' ? 'Por favor ejecuta tu herramienta para consultar y mostrar las facturas de proveedores pendientes' : $json.mensaje_usuario }}",
+        "options": {
+          "systemMessage": "Eres un asistente interno de Cuentas por Pagar (CxP) para analistas de la empresa.\nTu tono debe ser formal, estructurado y analítico.\n\n=== CONSULTA DE FACTURAS DE PROVEEDORES ===\n- Tienes acceso global a todas las facturas de proveedores pendientes (la gestión es centralizada).\n- Presenta la información siempre organizada en formato de tabla.\n- Destaca claramente las facturas que estén próximas a vencer o que ya se encuentren vencidas para priorizar su gestión.\n\n=== REPORTAR PAGO A PROVEEDOR ===\n- CUALQUIER mención de \"reportar un pago\", \"iniciar pago\" o similar por parte del usuario se refiere EXCLUSIVAMENTE a pagos a proveedores. \n- No pidas aclaraciones innecesarias sobre a quién se le va a pagar; asume directamente que es a un proveedor y ejecuta la herramienta de iniciar pago a proveedor.\n- Tras ejecutar la herramienta, responde SOLO con una línea breve de transición (ej. \"Aquí tienes las facturas de proveedores pendientes, elige una para continuar\").\n- NO listes las facturas tú mismo en el chat; la herramienta se encarga de mostrarlas con botones interactivos.\n\n=== REGLAS GENERALES ===\n- Responde siempre en español.\n- No inventes datos que no provengan de los resultados de tus herramientas.\n- Nunca afirmes haber \"registrado\", \"confirmado\" o \"procesado\" una acción si no existe una herramienta real que ejecute dicho proceso."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        144,
+        240
+      ],
+      "id": "a2c61ac1-9bfe-42e1-9aa6-d29870bd6f11",
+      "name": "AI Agente CXP"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "Claude Haiku 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        96,
+        32
+      ],
+      "id": "e0c7bb4d-f87b-4010-b68f-c06baf04a1d9",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "Claude Haiku 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        96,
+        480
+      ],
+      "id": "4a2b36e9-e430-488c-a2e2-c15799ad109e",
+      "name": "Anthropic Chat Model2",
+      "credentials": {
+        "anthropicApi": {
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Inicio').first().json.chat_id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        32
+      ],
+      "id": "532c5dc6-7c06-4893-81b6-3b1072fe15ea",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Inicio').first().json.chat_id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        480
+      ],
+      "id": "625b05d3-5c79-40d0-982c-21d592081b5d",
+      "name": "Postgres Chat Memory2",
+      "credentials": {
+        "postgres": {
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Tool_Consulta_Cartera_Vendedor": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Consulta_Facturas_Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Consulta_Stock_Productos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Iniciar_Reporte_Pago": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Cotizacion_Productos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15f - Limpia Formato Respuesta": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicio": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Módulo Ventas - Pedido'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Consulta_Facturas_Proveedores": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agente CXP",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Iniciar_Reporte_Pago_Proveedor": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agente CXP",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Enviar_Aviso_Deuda_Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Consulta_Historial_Pagos_Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool_Consulta_Historial_Pagos_Vendedor": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agente Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agente CXP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agente CXP",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agente Vendedor",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agente CXP",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Cliente": {
+      "main": [
+        [
+          {
+            "node": "15f - Limpia Formato Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agente Vendedor": {
+      "main": [
+        [
+          {
+            "node": "15f - Limpia Formato Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agente CXP": {
+      "main": [
+        [
+          {
+            "node": "15f - Limpia Formato Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e7a0cbeb-cd12-4787-97af-e829148c59b9",
+  "nodeGroups": [],
+  "id": "OkHnS0d0f77NCyTt",
+  "tags": []
+}

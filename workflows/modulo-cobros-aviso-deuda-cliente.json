@@ -1,0 +1,373 @@
+{
+  "name": "Módulo Cobros - Aviso Deuda Cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "vendedor_id"
+            },
+            {
+              "name": "nombre_cliente"
+            },
+            {
+              "name": "numero_factura"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "acc47616-258b-4263-a64d-dea968c0c7b1",
+      "name": "Inicio"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_clientes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "vendedor_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.vendedor_id }}"
+            },
+            {
+              "keyName": "nombre",
+              "condition": "ilike",
+              "keyValue": "=%{{ $json.nombre_cliente }}%"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a7198b1a-9f5b-4eec-bafa-2584d635a38d",
+      "name": "1 - Consulta Cliente Por Nombre",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dcb17727-f315-4ccd-82f7-af4b30cfd10d",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "0a143e13-5b52-491b-87f2-510af7f31f8e",
+      "name": "2 - IF Cliente Encontrado"
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  json: {\n    resultado: 'no_encontrado',\n    mensaje: 'No encontré ningún cliente con ese nombre en tu cartera.'\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        112
+      ],
+      "id": "03480bbf-d831-41cd-95ca-89d346f060e1",
+      "name": "3 - Responde Cliente No Encontrado"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_vista_aging",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $('1 - Consulta Cliente Por Nombre').item.json.id }}"
+            },
+            {
+              "keyName": "saldo_pendiente",
+              "condition": "gt",
+              "keyValue": "0"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -96
+      ],
+      "id": "c6db7d94-836d-48dc-817c-a88224094547",
+      "name": "4 - Consulta Deuda Cliente",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5caf0aec-b8c8-4c88-8e1c-aa445a81383c",
+              "leftValue": "={{ $json.saldo_pendiente }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1008,
+        -96
+      ],
+      "id": "5fded701-f4a4-4ab9-94ce-b5c65862874a",
+      "name": "5 - IF Tiene Deuda"
+    },
+    {
+      "parameters": {
+        "jsCode": "const nombreCliente = $('1 - Consulta Cliente Por Nombre').item.json.nombre;\n\nreturn {\n  json: {\n    resultado: 'sin_deuda',\n    mensaje: `${nombreCliente} no tiene ninguna deuda pendiente actualmente.`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        16
+      ],
+      "id": "30b8a87e-9d98-43f0-ac57-fdf1a2037b18",
+      "name": "6 - Responde Sin Deuda"
+    },
+    {
+      "parameters": {
+        "jsCode": "const facturas = $input.all().map(item => item.json);\nconst cliente = $('1 - Consulta Cliente Por Nombre').item.json;\n\nconst totalDeuda = facturas.reduce((sum, f) => sum + Number(f.saldo_pendiente), 0);\n\nconst filasFacturas = facturas.map(f => `\n  <tr>\n    <td style=\"padding:10px;border-bottom:1px solid #e5e7eb;\">${f.numero_factura}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #e5e7eb;\">${f.fecha_vencimiento}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #e5e7eb;\">$${f.saldo_pendiente}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #e5e7eb;color:${Number(f.dias_vencido) > 0 ? '#ef4444' : '#111827'};\">${f.dias_vencido > 0 ? f.dias_vencido + ' días vencida' : 'Al día'}</td>\n  </tr>\n`).join('');\n\nconst html = `\n  <div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">\n    <h2 style=\"color:#14213D;\">Aviso de saldo pendiente</h2>\n    <p>Estimado(a) ${cliente.nombre},</p>\n    <p>Le escribimos para informarle sobre el estado actual de su cuenta con nosotros.</p>\n    <table style=\"width:100%;border-collapse:collapse;margin:20px 0;\">\n      <thead>\n        <tr style=\"background:#f3f4f6;text-align:left;\">\n          <th style=\"padding:10px;\">Factura</th>\n          <th style=\"padding:10px;\">Vencimiento</th>\n          <th style=\"padding:10px;\">Saldo</th>\n          <th style=\"padding:10px;\">Estado</th>\n        </tr>\n      </thead>\n      <tbody>${filasFacturas}</tbody>\n    </table>\n    <p style=\"font-size:18px;font-weight:bold;color:#14213D;\">Total pendiente: $${totalDeuda.toFixed(2)}</p>\n    <p style=\"color:#6b7280;font-size:13px;margin-top:24px;\">Si ya realizó este pago, por favor ignore este mensaje. Ante cualquier duda, contáctenos.</p>\n  </div>\n`;\n\nreturn {\n  json: {\n    cliente_email: cliente.email,\n    asunto: `Aviso de saldo pendiente — $${totalDeuda.toFixed(2)}`,\n    html_body: html,\n    total_deuda: totalDeuda\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -192
+      ],
+      "id": "c1578168-f22f-4e9c-92f4-cda1d1a401b1",
+      "name": "7 - Arma Correo Aviso Deuda"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.cliente_email }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        -192
+      ],
+      "id": "69fa7be2-e9d4-42ec-b3a1-72adb3cb3715",
+      "name": "8 - Envia Correo Aviso Deuda",
+      "webhookId": "641bdeb2-ed44-469e-821f-fe345dca1b5f",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cliente = $('1 - Consulta Cliente Por Nombre').item.json;\nconst totalDeuda = $('7 - Arma Correo Aviso Deuda').item.json.total_deuda;\n\nreturn {\n  json: {\n    resultado: 'enviado',\n    mensaje: `Correo enviado a ${cliente.nombre} (${cliente.email}) con su saldo pendiente de $${totalDeuda.toFixed(2)}.`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -192
+      ],
+      "id": "9935d858-7c20-4aff-81a4-25d47da3f3a7",
+      "name": "9 - Responde Envio Exitoso"
+    },
+    {
+      "parameters": {
+        "jsCode": "const numeroFactura = $('Inicio').item.json.numero_factura;\nconst todasLasFacturas = $input.all().map(item => item.json);\n\nif (!numeroFactura || numeroFactura.trim() === '') {\n  return todasLasFacturas.map(f => ({ json: f }));\n}\n\nconst facturaEspecifica = todasLasFacturas.filter(f =>\n  f.numero_factura.toLowerCase() === numeroFactura.toLowerCase()\n);\n\nreturn facturaEspecifica.map(f => ({ json: f }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "a05ff72a-8eeb-4bd1-8c5e-d3b8a48bc01d",
+      "name": "4b - Filtra Por Factura Especifica"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inicio": {
+      "main": [
+        [
+          {
+            "node": "1 - Consulta Cliente Por Nombre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 - Consulta Cliente Por Nombre": {
+      "main": [
+        [
+          {
+            "node": "2 - IF Cliente Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - IF Cliente Encontrado": {
+      "main": [
+        [
+          {
+            "node": "4 - Consulta Deuda Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "3 - Responde Cliente No Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - Consulta Deuda Cliente": {
+      "main": [
+        [
+          {
+            "node": "4b - Filtra Por Factura Especifica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 - IF Tiene Deuda": {
+      "main": [
+        [
+          {
+            "node": "7 - Arma Correo Aviso Deuda",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "6 - Responde Sin Deuda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Arma Correo Aviso Deuda": {
+      "main": [
+        [
+          {
+            "node": "8 - Envia Correo Aviso Deuda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 - Envia Correo Aviso Deuda": {
+      "main": [
+        [
+          {
+            "node": "9 - Responde Envio Exitoso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4b - Filtra Por Factura Especifica": {
+      "main": [
+        [
+          {
+            "node": "5 - IF Tiene Deuda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "817d3823-b1e8-4438-90e0-d5f0a4c31621",
+  "nodeGroups": [],
+  "id": "h8bupIxZv06rsgV5",
+  "tags": []
+}

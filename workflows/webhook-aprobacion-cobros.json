@@ -1,0 +1,943 @@
+{
+  "name": "Webhook Aprobacion Cobros",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const query = $input.item.json.query;\nreturn {\n  json: {\n    cobro_id: query.cobro_id,\n    accion: query.accion\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6aed1832-e5d7-43d6-86b4-d56827bb355d",
+      "name": "2 - Extrae Parametros"
+    },
+    {
+      "parameters": {
+        "path": "cobro-decision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f2fae8bd-b090-4ba4-840b-77f550830f50",
+      "name": "1 - Webhook",
+      "webhookId": "77d4c421-8c27-4ef1-918f-e0cec2710573"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_cobros",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.cobro_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "28823370-a06b-4191-bafd-6c026bb5cfa3",
+      "name": "3 - Consulta Cobro Actual",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f14dde6f-b37f-4c0d-b934-029b263d953a",
+              "leftValue": "={{ $json.estado_verificacion }}",
+              "rightValue": "=pendiente",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "a07ddd55-cd2c-40b8-a59d-dc03ded1c3f5",
+      "name": "4 - IF Ya Procesado"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<h2>Este cobro ya fue procesado anteriormente.</h2>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "cd7e8dc6-7cec-4097-ad3b-e36f3b352442",
+      "name": "12 - Responde Ya Procesado"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "88d186c7-6ea4-4281-90bb-e9680b09894f",
+              "leftValue": "={{ $('2 - Extrae Parametros').item.json.accion }}",
+              "rightValue": "=aprobar",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        96
+      ],
+      "id": "ee514979-5dd1-4a03-a87e-7fe7ed26fd12",
+      "name": "5 - IF Accion Es Aprobar"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_facturas",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Cobro Actual').item.json.factura_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        -32
+      ],
+      "id": "1614bb9d-a9e0-4d36-8eb5-85f1df09c19c",
+      "name": "6a - Consulta Factura Actual",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const factura = $('6a - Consulta Factura Actual').item.json;\nconst montoCobro = $('3 - Consulta Cobro Actual').item.json.monto;\n\nconst nuevoMontoPagado = parseFloat(factura.monto_pagado) + parseFloat(montoCobro);\nconst saldoSinAjustar = parseFloat(factura.saldo_pendiente) - parseFloat(montoCobro);\nconst montoExcedente = saldoSinAjustar < 0 ? Math.abs(saldoSinAjustar) : 0;\nconst nuevoSaldo = saldoSinAjustar < 0 ? 0 : saldoSinAjustar;\nconst nuevoEstado = nuevoSaldo <= 0 ? 'Pagada' : factura.estado;\n\nreturn {\n  json: {\n    factura_id: factura.id,\n    nuevo_monto_pagado: nuevoMontoPagado,\n    nuevo_saldo: nuevoSaldo,\n    nuevo_estado: nuevoEstado,\n    monto_excedente: montoExcedente\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        -32
+      ],
+      "id": "5634d1e8-2ba9-4a5b-a9c7-e1e2e8fd3832",
+      "name": "6b - Calcula Nuevos Saldos"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "scxc_facturas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.factura_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "monto_pagado",
+              "fieldValue": "={{ $json.nuevo_monto_pagado }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.nuevo_estado }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        -32
+      ],
+      "id": "f79ee97c-8e79-47ea-beed-7e8b603d1dc6",
+      "name": "6c - Actualiza Factura",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "scxc_cobros",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Cobro Actual').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado_verificacion",
+              "fieldValue": "verificado"
+            },
+            {
+              "fieldId": "verificado_por",
+              "fieldValue": "analista"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        -32
+      ],
+      "id": "6abce713-36c7-4f70-97f4-7da28bbb1e16",
+      "name": "6d - Actualiza Cobro Aprobado",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "usuarios",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "referencia_id",
+              "condition": "eq",
+              "keyValue": "={{ $('6a - Consulta Factura Actual').item.json.cliente_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        -32
+      ],
+      "id": "71fa724a-08f7-46d0-8fb6-a8f1fded7fb5",
+      "name": "7a - Consulta Chat Cliente",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "bot_sesiones",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "usuario_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        -32
+      ],
+      "id": "b1c165f4-1434-4125-b726-cb664c932431",
+      "name": "7b - Consulta Sesion Chat Cliente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "usuarios",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "referencia_id",
+              "condition": "eq",
+              "keyValue": "={{ $('6a2 - Consulta Cliente De Factura').item.json.vendedor_id }}"
+            },
+            {
+              "keyName": "tipo_usuario",
+              "condition": "eq",
+              "keyValue": "vendedor"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        160
+      ],
+      "id": "d1c05101-aa97-4290-b6cb-78fd3713c7ef",
+      "name": "7c - Consulta Chat Vendedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('7b - Consulta Sesion Chat Cliente').item.json.chat_id }}",
+        "text": "={{ $('7e - Arma Mensaje Confirmacion Cliente').item.json.mensaje_cliente }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2592,
+        -32
+      ],
+      "id": "50a40aff-5714-4aed-a9b7-779e839c37e6",
+      "name": "7f - Envia Notificacion Cliente",
+      "webhookId": "2c1f6a58-c30c-4470-b6d4-c8e5ad4dcf39",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<h2>✅ Pago aprobado correctamente</h2>\n<p>El cliente y el vendedor fueron notificados.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2992,
+        176
+      ],
+      "id": "055ab24b-9895-493a-807d-1ca8d4e27599",
+      "name": "8 - Responde Aprobado"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2784,
+        176
+      ],
+      "id": "8a4f84f9-1535-4fd7-902f-ddef15959d8d",
+      "name": "7h - Espera Ambas Notificaciones"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "scxc_cobros",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Cobro Actual').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado_verificacion",
+              "fieldValue": "rechazado"
+            },
+            {
+              "fieldId": "verificado_por",
+              "fieldValue": "analista"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        400
+      ],
+      "id": "76f240ca-73f9-4162-b6b6-fb9e4b933639",
+      "name": "9 - Rechaza Cobro",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_facturas",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('3 - Consulta Cobro Actual').item.json.factura_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        400
+      ],
+      "id": "19d30f20-56fa-4a01-81c8-5beff6a31b8c",
+      "name": "9b - Consulta Factura Para Rechazo",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "usuarios",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "referencia_id",
+              "condition": "eq",
+              "keyValue": "=$('9b - Consulta Factura Para Rechazo').item.json.cliente_id }}"
+            },
+            {
+              "keyName": "tipo_usuario",
+              "condition": "eq",
+              "keyValue": "cliente"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        400
+      ],
+      "id": "ddb3cc65-d225-40e6-bbbe-bbf6e2aece77",
+      "name": "9c - Consulta Chat Cliente Rechazo",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "bot_sesiones",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "usuario_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        400
+      ],
+      "id": "d0ae61a1-d178-482f-930d-e4aaac542807",
+      "name": "9d - Consulta Sesion Chat Cliente Rechazo",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('9d - Consulta Sesion Chat Cliente Rechazo').item.json.chat_id }}",
+        "text": "=Tu pago reportado para la factura {{ $('9b - Consulta Factura Para Rechazo').item.json.numero_factura }} no pudo ser verificado. Por favor contacta a tu asesor para más información.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1888,
+        400
+      ],
+      "id": "93be3662-9fa8-482e-aaf8-be408b24a96f",
+      "name": "10 - Notifica Cliente Rechazo",
+      "webhookId": "4299da5a-8afe-4bd2-b594-5c0e1154132d",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<h2>❌ Pago rechazado</h2><p>El cliente fue notificado.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2096,
+        400
+      ],
+      "id": "e2307c02-7e53-4f82-8249-59ce1bbc17c0",
+      "name": "11 - Responde Rechazado"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_clientes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('6a - Consulta Factura Actual').item.json.cliente_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        160
+      ],
+      "id": "fc9e4356-ec60-40b0-8bf4-ac5d3d0babba",
+      "name": "6a2 - Consulta Cliente De Factura",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "vendedor@example.com",
+        "subject": "=Pago confirmado — Factura {{ $('6a - Consulta Factura Actual').item.json.numero_factura }}",
+        "message": "=<h3>Pago confirmado</h3> <p><strong>Factura:</strong> {{ $('6a - Consulta Factura Actual').item.json.numero_factura }}</p> <p><strong>Monto pagado:</strong> ${{ $('3 - Consulta Cobro Actual').item.json.monto }}</p> <p>El saldo del cliente ha sido actualizado en el sistema.</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1808,
+        160
+      ],
+      "id": "5f953c69-93dc-4b53-9fb3-66fb5e4f2869",
+      "name": "7g - Notifica Vendedor por Correo",
+      "webhookId": "a0b5d60c-c8b4-413d-8101-6f11a6eb92ee",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const nuevoSaldo = $('6b - Calcula Nuevos Saldos').item.json.nuevo_saldo;\nconst excedente = $('6b - Calcula Nuevos Saldos').item.json.monto_excedente;\nconst monto = $('3 - Consulta Cobro Actual').item.json.monto;\nconst numeroFactura = $('6a - Consulta Factura Actual').item.json.numero_factura;\n\nlet mensaje;\nif (nuevoSaldo === 0 && excedente > 0) {\n  mensaje = `✅ Tu pago de $${monto} para la factura ${numeroFactura} fue confirmado.\\n\\nLa factura quedó completamente saldada, y pagaste $${excedente} de más. Nuestro equipo se pondrá en contacto contigo para coordinar el excedente.`;\n} else if (nuevoSaldo === 0) {\n  mensaje = `✅ Tu pago de $${monto} para la factura ${numeroFactura} fue confirmado.\\n\\n¡La factura quedó completamente saldada! Gracias por tu pago.`;\n} else {\n  mensaje = `✅ Tu pago de $${monto} para la factura ${numeroFactura} fue confirmado.\\n\\nTodavía queda un saldo pendiente de $${nuevoSaldo} en esta factura.`;\n}\n\nreturn { json: { mensaje_cliente: mensaje } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        -32
+      ],
+      "id": "737c0104-7f1b-4e8a-8bb2-5a560fd5d3ae",
+      "name": "7e - Arma Mensaje Confirmacion Cliente"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "1 - Webhook": {
+      "main": [
+        [
+          {
+            "node": "2 - Extrae Parametros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Extrae Parametros": {
+      "main": [
+        [
+          {
+            "node": "3 - Consulta Cobro Actual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 - Consulta Cobro Actual": {
+      "main": [
+        [
+          {
+            "node": "4 - IF Ya Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - IF Ya Procesado": {
+      "main": [
+        [
+          {
+            "node": "12 - Responde Ya Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5 - IF Accion Es Aprobar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 - IF Accion Es Aprobar": {
+      "main": [
+        [
+          {
+            "node": "6a - Consulta Factura Actual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "9 - Rechaza Cobro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6a - Consulta Factura Actual": {
+      "main": [
+        [
+          {
+            "node": "6a2 - Consulta Cliente De Factura",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "6b - Calcula Nuevos Saldos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6b - Calcula Nuevos Saldos": {
+      "main": [
+        [
+          {
+            "node": "6c - Actualiza Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6c - Actualiza Factura": {
+      "main": [
+        [
+          {
+            "node": "6d - Actualiza Cobro Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6d - Actualiza Cobro Aprobado": {
+      "main": [
+        [
+          {
+            "node": "7a - Consulta Chat Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7a - Consulta Chat Cliente": {
+      "main": [
+        [
+          {
+            "node": "7b - Consulta Sesion Chat Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7c - Consulta Chat Vendedor": {
+      "main": [
+        [
+          {
+            "node": "7g - Notifica Vendedor por Correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7b - Consulta Sesion Chat Cliente": {
+      "main": [
+        [
+          {
+            "node": "7e - Arma Mensaje Confirmacion Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7f - Envia Notificacion Cliente": {
+      "main": [
+        [
+          {
+            "node": "7h - Espera Ambas Notificaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7h - Espera Ambas Notificaciones": {
+      "main": [
+        [
+          {
+            "node": "8 - Responde Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9 - Rechaza Cobro": {
+      "main": [
+        [
+          {
+            "node": "9b - Consulta Factura Para Rechazo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9b - Consulta Factura Para Rechazo": {
+      "main": [
+        [
+          {
+            "node": "9c - Consulta Chat Cliente Rechazo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9c - Consulta Chat Cliente Rechazo": {
+      "main": [
+        [
+          {
+            "node": "9d - Consulta Sesion Chat Cliente Rechazo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9d - Consulta Sesion Chat Cliente Rechazo": {
+      "main": [
+        [
+          {
+            "node": "10 - Notifica Cliente Rechazo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Notifica Cliente Rechazo": {
+      "main": [
+        [
+          {
+            "node": "11 - Responde Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6a2 - Consulta Cliente De Factura": {
+      "main": [
+        [
+          {
+            "node": "7c - Consulta Chat Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7g - Notifica Vendedor por Correo": {
+      "main": [
+        [
+          {
+            "node": "7h - Espera Ambas Notificaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7e - Arma Mensaje Confirmacion Cliente": {
+      "main": [
+        [
+          {
+            "node": "7f - Envia Notificacion Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a8554937-dcb9-4240-a4e8-15c8c7246fac",
+  "nodeGroups": [],
+  "id": "CU4gULazn6g2m50U",
+  "tags": []
+}

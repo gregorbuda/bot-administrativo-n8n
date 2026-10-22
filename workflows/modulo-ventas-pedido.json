@@ -1,0 +1,1358 @@
+{
+  "name": "Módulo Ventas - Pedido",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tipo_usuario"
+            },
+            {
+              "name": "referencia_id"
+            },
+            {
+              "name": "chat_id"
+            },
+            {
+              "name": "mensaje_usuario"
+            },
+            {
+              "name": "flujo_activo"
+            },
+            {
+              "name": "paso_actual"
+            },
+            {
+              "name": "datos_temporales"
+            },
+            {
+              "name": "file_id"
+            },
+            {
+              "name": "es_archivo"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9a841434-414c-4b1f-b4de-15ce169ba838",
+      "name": "Inicio"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mensaje_usuario }}",
+                    "rightValue": "iniciar_pedido",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "70c0a698-aeb7-4f12-a67c-e5da748234f6"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "575d0989-9914-40d2-a7e1-de6ab93740d3",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_producto",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c0a8b950-e9c5-45f5-9f30-52274c3b7b1d",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_cantidad",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f587ffee-24ab-424e-b57d-71546c75bb63",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": "esperando_mas_o_confirmar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        -32
+      ],
+      "id": "bdad04ae-2066-488c-bfb7-e90b5328eb5d",
+      "name": "Router - Enruta Paso Pedido"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sinv_productos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -528
+      ],
+      "id": "6f168d7b-5761-4d76-998c-c54d61192fc2",
+      "name": "1 - Consulta Productos Disponibles",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const productos = $input.all().map(item => item.json);\nconst chat_id = $('Inicio').item.json.chat_id;\n\nconst inline_keyboard = productos.map(p => ([{\n  text: `${p.nombre} - $${p.precio}`,\n  callback_data: `producto:${p.id}`\n}]));\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    texto: 'Selecciona un producto para agregar a tu pedido:',\n    botones: JSON.stringify({ inline_keyboard })\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -528
+      ],
+      "id": "291e7a68-b2fa-46b7-b733-bcf889b0a88f",
+      "name": "2 - Inicializa Carrito y Muestra Productos"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo",
+              "fieldValue": "armando_pedido"
+            },
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_producto"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "={\"items\":[]}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -528
+      ],
+      "id": "c7b95e09-a594-4299-8810-8fc2fa87d4ed",
+      "name": "3a - Actualiza Sesion",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('2 - Inicializa Carrito y Muestra Productos').item.json.chat_id }}\",\n  \"text\": \"{{ $('2 - Inicializa Carrito y Muestra Productos').item.json.texto }}\",\n  \"reply_markup\": {{ $('2 - Inicializa Carrito y Muestra Productos').item.json.botones }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1024,
+        -528
+      ],
+      "id": "96b276e2-34dd-4f15-8273-7558d1123dcb",
+      "name": "3b - Actualiza Sesion"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5465a659-2edb-43ea-9972-708dc68fe931",
+              "leftValue": "={{ $json.mensaje_usuario }}",
+              "rightValue": "producto:",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        -240
+      ],
+      "id": "ba49b59a-1050-43eb-af0b-a1be6df65c38",
+      "name": "4 - Detecta Seleccion Producto"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = $('Inicio').item.json.mensaje_usuario;\nconst producto_id = mensaje.replace('producto:', '');\nconst chat_id = $('Inicio').item.json.chat_id;\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    producto_id: producto_id\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -336
+      ],
+      "id": "35379792-c42d-4a4d-8369-96b0bfcdfd66",
+      "name": "6 - Extrae Producto Id"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sinv_productos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('6 - Extrae Producto Id').item.json.producto_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -336
+      ],
+      "id": "42e248fa-8bee-42b9-9b21-36221166a807",
+      "name": "7 - Consulta Datos Producto",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('6 - Extrae Producto Id').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_cantidad"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "=  {{ JSON.stringify({ ...JSON.parse($('Inicio').item.json.datos_temporales), producto_actual: { id: $('7 - Consulta Datos Producto').item.json.id, codigo: $('7 - Consulta Datos Producto').item.json.codigo, nombre: $('7 - Consulta Datos Producto').item.json.nombre, precio: $('7 - Consulta Datos Producto').item.json.precio, stock_disponible: $('7 - Consulta Datos Producto').item.json.stock_disponible } }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -336
+      ],
+      "id": "072cce61-f457-4b1f-878a-75df5583aa3c",
+      "name": "8 - Guarda Producto Elegido y Avanza Paso",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('6 - Extrae Producto Id').item.json.chat_id }}",
+        "text": "={{ $('7 - Consulta Datos Producto').item.json.nombre }} — Stock disponible: {{ $('7 - Consulta Datos Producto').item.json.stock_disponible }} {{ $('7 - Consulta Datos Producto').item.json.unidad_medida }}. ¿Cuántas unidades deseas? Escribe solo el número.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        -336
+      ],
+      "id": "78cb133d-8221-423f-8f22-3e6819920432",
+      "name": "9 - Pide Cantidad",
+      "webhookId": "8aa75e6d-8ce6-4c49-a1c1-57f8dee584b4",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Inicio').item.json.chat_id }}",
+        "text": "Por favor selecciona un producto usando los botones de arriba. ⬆️",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        656,
+        -144
+      ],
+      "id": "9c32c935-8a9e-4286-82f9-5552327f5548",
+      "name": "5 - Pide Usar Botones Producto",
+      "webhookId": "0de80123-266a-4568-afb4-19e4abd0c904",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const texto = $('Inicio').item.json.mensaje_usuario;\nconst cantidad = parseFloat(texto);\nconst datosTemp = JSON.parse($('Inicio').item.json.datos_temporales);\nconst productoActual = datosTemp.producto_actual;\n\nconst esNumeroValido = !isNaN(cantidad) && cantidad > 0 && /^\\d+(\\.\\d{1,2})?$/.test(texto.trim());\nconst hayStockSuficiente = esNumeroValido && cantidad <= productoActual.stock_disponible;\n\nreturn {\n  json: {\n    cantidad_valida: esNumeroValido && hayStockSuficiente,\n    formato_invalido: !esNumeroValido,\n    sin_stock: esNumeroValido && !hayStockSuficiente,\n    cantidad: esNumeroValido ? cantidad : null,\n    producto_actual: productoActual,\n    chat_id: $('Inicio').item.json.chat_id\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        112
+      ],
+      "id": "fe7ed635-b30b-409e-adfa-e66d71aec12d",
+      "name": "10 - Verifica Formato Cantidad"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d88d10ec-f6bc-41b4-85a0-2ba69489b816",
+              "leftValue": "={{ $json.cantidad_valida }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        640,
+        112
+      ],
+      "id": "750dce8c-be46-43e3-80d4-fc5b9ed4cdb2",
+      "name": "11 - IF Cantidad Valida"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('10 - Verifica Formato Cantidad').item.json.chat_id }}",
+        "text": "={{ $('10 - Verifica Formato Cantidad').item.json.sin_stock ? 'No hay stock suficiente. Disponible: ' + $('10 - Verifica Formato Cantidad').item.json.producto_actual.stock_disponible + '. Escribe una cantidad menor.' : 'Por favor escribe solo un número válido (ej. 5 o 5.5).' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        192
+      ],
+      "id": "34cf4f6c-9cb6-4eee-b334-d0defceecc60",
+      "name": "12 - Pide Cantidad Correcta",
+      "webhookId": "00d29786-3f67-4a7d-a313-7a34e3634730",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('10 - Verifica Formato Cantidad').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_mas_o_confirmar"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "=  {{ (() => {\n    const datosTemp = JSON.parse($('Inicio').item.json.datos_temporales);\n    const producto = $('10 - Verifica Formato Cantidad').item.json.producto_actual;\n    const cantidad = $('10 - Verifica Formato Cantidad').item.json.cantidad;\n    \n    const nuevoItem = {\n      producto_id: producto.id,\n      codigo: producto.codigo,\n      nombre: producto.nombre,\n      cantidad: cantidad,\n      precio_unitario: producto.precio,\n      subtotal: producto.precio * cantidad\n    };\n    \n    const items = datosTemp.items || [];\n    items.push(nuevoItem);\n    \n    return JSON.stringify({ items: items });\n  })() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "16665f3c-9c38-49d9-81e1-6df409c2f9d0",
+      "name": "13 - Agrega Item Al Carrito",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('10 - Verifica Formato Cantidad').item.json.chat_id }}\",\n  \"text\": \"Producto agregado a tu carrito. ¿Deseas agregar otro producto o finalizar tu pedido?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{ \"text\": \"➕ Agregar otro\", \"callback_data\": \"agregar_otro\" }],\n      [{ \"text\": \"✅ Finalizar pedido\", \"callback_data\": \"finalizar_pedido\" }]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "901df28c-f7a7-43f9-b4bb-cb818e6a3cbb",
+      "name": "14 - Pregunta Continuar O Finalizar"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "017bc278-bce3-415e-bf2e-5c7076d2e1cd",
+              "leftValue": "={{ $('Inicio').item.json.mensaje_usuario }}",
+              "rightValue": "finalizar_pedido",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        464
+      ],
+      "id": "6ca84811-77a0-4c7f-99b7-b92c44650788",
+      "name": "15 - Detecta Continuar O Finalizar"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Inicio').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "paso_actual",
+              "fieldValue": "esperando_producto"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        688,
+        560
+      ],
+      "id": "b951b031-62f4-4dfa-b504-3e0434e2f72c",
+      "name": "16 - Reinicia Seleccion Producto",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sinv_productos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        560
+      ],
+      "id": "1e1340d3-0ee5-45f6-9f33-2e6de9cb9165",
+      "name": "17 - Consulta Productos Disponibles",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const productos = $input.all().map(item => item.json);\nconst chat_id = $('Inicio').item.json.chat_id;\n\nconst inline_keyboard = productos.map(p => ([{\n  text: `${p.nombre} - $${p.precio}`,\n  callback_data: `producto:${p.id}`\n}]));\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    texto: 'Selecciona otro producto para agregar a tu pedido:',\n    botones: JSON.stringify({ inline_keyboard })\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        560
+      ],
+      "id": "9e87f4f5-6a0c-4327-accd-00cad008e0c0",
+      "name": "18 - Arma Lista Productos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('18 - Arma Lista Productos').item.json.chat_id }}\",\n  \"text\": \"{{ $('18 - Arma Lista Productos').item.json.texto }}\",\n  \"reply_markup\": {{ $('18 - Arma Lista Productos').item.json.botones }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1312,
+        560
+      ],
+      "id": "fe041bf4-b70e-4932-a059-e3ec16a18f39",
+      "name": "19 - Envia Lista Productos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const datosTemp = JSON.parse($('Inicio').item.json.datos_temporales);\nconst items = datosTemp.items || [];\nconst chat_id = $('Inicio').item.json.chat_id;\nconst referencia_id = $('Inicio').item.json.referencia_id;\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    referencia_id: referencia_id,\n    items: items\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        384
+      ],
+      "id": "d6ee9932-d5c0-4bdb-b95f-cad57b9f8c5f",
+      "name": "20 - Extrae Items Del Carrito"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sinv_productos",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        384
+      ],
+      "id": "6e3938df-743d-4a0e-9764-8ac69ff8fcd8",
+      "name": "21 - Consulta Stock Actual De Items",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const itemsCarrito = $('20 - Extrae Items Del Carrito').item.json.items;\nconst stockActual = $input.all().map(item => item.json);\nconst chat_id = $('20 - Extrae Items Del Carrito').item.json.chat_id;\nconst referencia_id = $('20 - Extrae Items Del Carrito').item.json.referencia_id;\n\nconst problemas = [];\nlet montoTotal = 0;\n\nfor (const item of itemsCarrito) {\n  const productoActual = stockActual.find(p => p.id === item.producto_id);\n  \n  if (!productoActual) {\n    problemas.push(`${item.nombre}: ya no está disponible`);\n    continue;\n  }\n  \n  if (item.cantidad > productoActual.stock_disponible) {\n    problemas.push(`${item.nombre}: solo quedan ${productoActual.stock_disponible} disponibles (pediste ${item.cantidad})`);\n    continue;\n  }\n  \n  montoTotal += item.subtotal;\n}\n\nreturn {\n  json: {\n    chat_id: chat_id,\n    referencia_id: referencia_id,\n    items: itemsCarrito,\n    monto_total: montoTotal,\n    hay_problemas: problemas.length > 0,\n    mensaje_problemas: problemas.join('\\n')\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        384
+      ],
+      "id": "5b45c1fa-5a4e-47ce-b335-0099d1b691ee",
+      "name": "22 - Valida Stock De Todo El Carrito"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6fbc3354-37f5-4ad5-b296-c3beba53e18a",
+              "leftValue": "={{ $json.hay_problemas }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        384
+      ],
+      "id": "ea7f03f1-2c30-419e-b333-929dd75ddf56",
+      "name": "23 - IF Hay Problemas Stock"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot__TELEGRAM_BOT_TOKEN__/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('22 - Valida Stock De Todo El Carrito').item.json.chat_id }}\",\n  \"text\": \"Hay un problema con tu pedido:\\n\\n{{ $('22 - Valida Stock De Todo El Carrito').item.json.mensaje_problemas }}\\n\\nPor favor ajusta tu pedido o contacta a tu vendedor.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        224
+      ],
+      "id": "b13f7c86-0c1b-4ed2-897a-f61cd5fdb436",
+      "name": "24 - Informa Problema Stock"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "tableId": "solicitudes_pedido",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "cliente_id",
+              "fieldValue": "={{ $('22 - Valida Stock De Todo El Carrito').item.json.referencia_id }}"
+            },
+            {
+              "fieldId": "vendedor_id",
+              "fieldValue": "={{ $('25a - Consulta Vendedor Del Cliente').item.json.vendedor_id }}"
+            },
+            {
+              "fieldId": "items",
+              "fieldValue": "={{ JSON.stringify($('22 - Valida Stock De Todo El Carrito').item.json.items) }}"
+            },
+            {
+              "fieldId": "monto_total",
+              "fieldValue": "={{ $('22 - Valida Stock De Todo El Carrito').item.json.monto_total }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "pendiente"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        464
+      ],
+      "id": "f930e024-cba1-46e9-9f13-aebcb7109767",
+      "name": "25 - Guarda Solicitud Pedido",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "scxc_clientes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('22 - Valida Stock De Todo El Carrito').item.json.referencia_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        464
+      ],
+      "id": "1cef3712-fd4b-4400-994d-f10dedce0148",
+      "name": "25a - Consulta Vendedor Del Cliente",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "getAll",
+        "tableId": "sven_vendedores",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('25a - Consulta Vendedor Del Cliente').item.json.vendedor_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        464
+      ],
+      "id": "4888b906-ccab-4ab9-bc31-fd72ec9d5134",
+      "name": "26 - Consulta Email Vendedor",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('22 - Valida Stock De Todo El Carrito').item.json.items;\nconst montoTotal = $('22 - Valida Stock De Todo El Carrito').item.json.monto_total;\nconst pedidoId = $('25 - Guarda Solicitud Pedido').item.json.id;\nconst vendedorEmail = $('26 - Consulta Email Vendedor').item.json.email;\nconst vendedorNombre = $('26 - Consulta Email Vendedor').item.json.nombre;\n\nconst filasItems = items.map(item => `\n  <tr>\n    <td style=\"padding:8px;border-bottom:1px solid #ddd;\">${item.codigo}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #ddd;\">${item.nombre}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #ddd;\">${item.cantidad}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #ddd;\">$${item.precio_unitario}</td>\n    <td style=\"padding:8px;border-bottom:1px solid #ddd;\">$${item.subtotal}</td>\n  </tr>\n`).join('');\n\nconst html = `\n  <h3>Nueva solicitud de pedido</h3>\n  <table style=\"border-collapse:collapse;width:100%;\">\n    <thead>\n      <tr style=\"background:#f3f4f6;text-align:left;\">\n        <th style=\"padding:8px;\">Código</th>\n        <th style=\"padding:8px;\">Producto</th>\n        <th style=\"padding:8px;\">Cantidad</th>\n        <th style=\"padding:8px;\">Precio Unit.</th>\n        <th style=\"padding:8px;\">Subtotal</th>\n      </tr>\n    </thead>\n    <tbody>${filasItems}</tbody>\n  </table>\n  <p style=\"margin-top:16px;\"><strong>Total: $${montoTotal}</strong></p>\n  <br>\n  <p>\n    <a href=\"https://__N8N_HOST__/webhook/pedido-decision?pedido_id=${pedidoId}&accion=aprobar\" style=\"background:#22c55e;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">✅ Aprobar</a>\n    &nbsp;\n    <a href=\"https://__N8N_HOST__/webhook/pedido-decision?pedido_id=${pedidoId}&accion=rechazar\" style=\"background:#ef4444;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">❌ Rechazar</a>\n  </p>\n`;\n\nreturn {\n  json: {\n    vendedor_email: vendedorEmail,\n    asunto: `Nueva solicitud de pedido — $${montoTotal}`,\n    html_body: html\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        464
+      ],
+      "id": "b0dd4c9c-01c2-43a5-9605-eb7f03f6ae47",
+      "name": "27 - Arma Correo Vendedor"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.vendedor_email }}",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2432,
+        464
+      ],
+      "id": "60564366-cfb9-4ecd-90b2-460803c681f6",
+      "name": "28 - Envia Correo Vendedor Pedido",
+      "webhookId": "9f5ec6b8-b27f-4ae5-ae0d-c028a5732889",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('22 - Valida Stock De Todo El Carrito').item.json.chat_id }}",
+        "text": "=¡Listo! Tu pedido por $${{ $('22 - Valida Stock De Todo El Carrito').item.json.monto_total }} fue registrado y está pendiente de aprobación. Te avisaremos cuando sea confirmado.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2624,
+        464
+      ],
+      "id": "020238eb-b70b-41eb-b8b5-a35280c7d00d",
+      "name": "29 - Confirma Pedido Al Cliente",
+      "webhookId": "db028a7f-2971-4cd6-a30d-5a0ad88e92e3",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "schema": "cobros_demo",
+        "operation": "update",
+        "tableId": "bot_sesiones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('22 - Valida Stock De Todo El Carrito').item.json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_activo"
+            },
+            {
+              "fieldId": "paso_actual"
+            },
+            {
+              "fieldId": "datos_temporales",
+              "fieldValue": "{}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        464
+      ],
+      "id": "8096b952-7a9f-4dbb-85d6-cc565ecc539a",
+      "name": "30 - Limpia Sesion Pedid",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inicio": {
+      "main": [
+        [
+          {
+            "node": "Router - Enruta Paso Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router - Enruta Paso Pedido": {
+      "main": [
+        [
+          {
+            "node": "1 - Consulta Productos Disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "4 - Detecta Seleccion Producto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10 - Verifica Formato Cantidad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "15 - Detecta Continuar O Finalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3a - Actualiza Sesion": {
+      "main": [
+        [
+          {
+            "node": "3b - Actualiza Sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Inicializa Carrito y Muestra Productos": {
+      "main": [
+        [
+          {
+            "node": "3a - Actualiza Sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 - Consulta Productos Disponibles": {
+      "main": [
+        [
+          {
+            "node": "2 - Inicializa Carrito y Muestra Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - Detecta Seleccion Producto": {
+      "main": [
+        [
+          {
+            "node": "6 - Extrae Producto Id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5 - Pide Usar Botones Producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6 - Extrae Producto Id": {
+      "main": [
+        [
+          {
+            "node": "7 - Consulta Datos Producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Consulta Datos Producto": {
+      "main": [
+        [
+          {
+            "node": "8 - Guarda Producto Elegido y Avanza Paso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 - Guarda Producto Elegido y Avanza Paso": {
+      "main": [
+        [
+          {
+            "node": "9 - Pide Cantidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Verifica Formato Cantidad": {
+      "main": [
+        [
+          {
+            "node": "11 - IF Cantidad Valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - IF Cantidad Valida": {
+      "main": [
+        [
+          {
+            "node": "13 - Agrega Item Al Carrito",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "12 - Pide Cantidad Correcta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Agrega Item Al Carrito": {
+      "main": [
+        [
+          {
+            "node": "14 - Pregunta Continuar O Finalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 - Detecta Continuar O Finalizar": {
+      "main": [
+        [
+          {
+            "node": "20 - Extrae Items Del Carrito",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "16 - Reinicia Seleccion Producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 - Reinicia Seleccion Producto": {
+      "main": [
+        [
+          {
+            "node": "17 - Consulta Productos Disponibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 - Consulta Productos Disponibles": {
+      "main": [
+        [
+          {
+            "node": "18 - Arma Lista Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 - Arma Lista Productos": {
+      "main": [
+        [
+          {
+            "node": "19 - Envia Lista Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 - Extrae Items Del Carrito": {
+      "main": [
+        [
+          {
+            "node": "21 - Consulta Stock Actual De Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "21 - Consulta Stock Actual De Items": {
+      "main": [
+        [
+          {
+            "node": "22 - Valida Stock De Todo El Carrito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 - Valida Stock De Todo El Carrito": {
+      "main": [
+        [
+          {
+            "node": "23 - IF Hay Problemas Stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 - IF Hay Problemas Stock": {
+      "main": [
+        [
+          {
+            "node": "24 - Informa Problema Stock",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "25a - Consulta Vendedor Del Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "25a - Consulta Vendedor Del Cliente": {
+      "main": [
+        [
+          {
+            "node": "25 - Guarda Solicitud Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "25 - Guarda Solicitud Pedido": {
+      "main": [
+        [
+          {
+            "node": "26 - Consulta Email Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "26 - Consulta Email Vendedor": {
+      "main": [
+        [
+          {
+            "node": "27 - Arma Correo Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "27 - Arma Correo Vendedor": {
+      "main": [
+        [
+          {
+            "node": "28 - Envia Correo Vendedor Pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "28 - Envia Correo Vendedor Pedido": {
+      "main": [
+        [
+          {
+            "node": "29 - Confirma Pedido Al Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "29 - Confirma Pedido Al Cliente": {
+      "main": [
+        [
+          {
+            "node": "30 - Limpia Sesion Pedid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "19549905-1001-4aa7-846f-8f0d5d70b374",
+  "nodeGroups": [],
+  "id": "CHRjo226xywEZcK5",
+  "tags": []
+}
